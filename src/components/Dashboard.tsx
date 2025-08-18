@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { userAPI, patientAPI, vitalAPI } from "@/services/api";
 import { io } from "socket.io-client";
-
 import {
   Card,
   CardContent,
@@ -18,7 +17,6 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-
 import { VitalSignChart } from "./VitalSignChart";
 import { AlertsPanel } from "./AlertsPanel";
 import { AIAssistant } from "./AIAssistant";
@@ -28,7 +26,7 @@ import UserManagement from "./UserManagement";
 import AppointmentsManagement from "./AppointmentsManagement";
 import BillingManagement from "./BillingManagement";
 import NotesSection from "@/components/NotesSection";
-
+import DoctorDashboard from "./DoctorDashboard"; // NEW: Import the doctor-specific dashboard
 import {
   Heart,
   Activity,
@@ -55,10 +53,8 @@ interface UserProfile {
   department?: string;
 }
 
-/**
- * Fallback data used when APIs fail or are not available.
- * Keeps charts functional during development.
- */
+// Fallback data used when APIs fail or are not available.
+// Keeps charts functional during development.
 const fallbackHeartRate = [
   { time: "12:00", value: 72 },
   { time: "12:15", value: 75 },
@@ -94,9 +90,8 @@ const fallbackOxygen = [
   { time: "1:00", value: 97 },
   { time: "1:15", value: 98 },
 ];
+
 export function Dashboard({ onLogout }: DashboardProps) {
-  const [activeTab, setActiveTab] = useState<string>("overview");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const queryClient = useQueryClient();
   const alertsRef = useRef<HTMLDivElement | null>(null);
 
@@ -108,6 +103,13 @@ export function Dashboard({ onLogout }: DashboardProps) {
       return res.data;
     },
   });
+
+  // Set default tab: "patients" for doctors, "overview" for others
+  const [activeTab, setActiveTab] = useState<string>(
+    (userProfile?.role || "").toLowerCase() === "doctor" ? "patients" : "overview"
+  );
+
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
 
   // Fetch patients
   const { data: patientsData } = useQuery({
@@ -159,11 +161,9 @@ export function Dashboard({ onLogout }: DashboardProps) {
   // Real-time alerts via Socket.io
   useEffect(() => {
     if (!userProfile) return;
-
     const socket = io(import.meta.env.VITE_SOCKET_URL || "http://localhost:5000", {
       auth: { token: typeof window !== "undefined" ? localStorage.getItem("token") : null },
     });
-
     socket.on("connect", () => console.log("WebSocket connected"));
     socket.on("disconnect", (reason) => console.log("WebSocket disconnected:", reason));
     socket.on("vital_alert", (data: any) => {
@@ -173,7 +173,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
       // Optionally increment criticalAlerts
       setStats((prev) => ({ ...prev, criticalAlerts: (prev.criticalAlerts || 0) + 1 }));
     });
-
     return () => {
       socket.disconnect();
     };
@@ -236,6 +235,12 @@ export function Dashboard({ onLogout }: DashboardProps) {
     );
   }
 
+  // NEW: Conditional rendering for Doctor role - Use DoctorDashboard
+  if ((userProfile.role || "").toLowerCase() === "doctor") {
+    return <DoctorDashboard />;
+  }
+
+  // Original dashboard for other roles
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -251,7 +256,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
             >
               <Menu className="h-4 w-4" />
             </Button>
-
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
                 <Heart className="w-5 h-5 text-white" />
@@ -262,12 +266,10 @@ export function Dashboard({ onLogout }: DashboardProps) {
               </div>
             </div>
           </div>
-
           <div className="flex items-center space-x-4">
             <Badge variant={getRoleBadgeVariant(userProfile.role) as any}>
               {getRoleDisplayName(userProfile.role)}
             </Badge>
-
             <Button
               variant="outline"
               size="sm"
@@ -279,7 +281,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
               <Bell className="w-4 h-4 mr-2" />
               Alerts
             </Button>
-
             <Button variant="ghost" size="sm" onClick={onLogout}>
               <LogOut className="w-4 h-4 mr-2" />
               Logout
@@ -287,7 +288,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
           </div>
         </div>
       </header>
-
       {/* Main Content */}
       <div className="container mx-auto p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -296,38 +296,32 @@ export function Dashboard({ onLogout }: DashboardProps) {
               <Home className="w-4 h-4" />
               <span className="hidden sm:inline">Overview</span>
             </TabsTrigger>
-
             <TabsTrigger value="vitals" className="flex items-center space-x-2">
               <Activity className="w-4 h-4" />
               <span className="hidden sm:inline">Vitals</span>
             </TabsTrigger>
-
             <TabsTrigger value="analytics" className="flex items-center space-x-2">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Analytics</span>
             </TabsTrigger>
-
             <TabsTrigger value="patients" className="flex items-center space-x-2">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Patients</span>
             </TabsTrigger>
-
-            {/* New tab only for Admin */}
+            {/* Admin: Users */}
             {(userProfile.role || "").toLowerCase() === "admin" && (
               <TabsTrigger value="users" className="flex items-center space-x-2">
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">Users</span>
               </TabsTrigger>
             )}
-
-            {/* Admin: Appointments */}
-            {(userProfile.role || "").toLowerCase() === "admin" && (
+            {/* Admin or Doctor: Appointments */}
+            {["admin", "doctor"].includes((userProfile.role || "").toLowerCase()) && (
               <TabsTrigger value="appointments" className="flex items-center space-x-2">
                 <Activity className="w-4 h-4" />
                 <span className="hidden sm:inline">Appointments</span>
               </TabsTrigger>
             )}
-
             {/* Admin: Billing */}
             {(userProfile.role || "").toLowerCase() === "admin" && (
               <TabsTrigger value="billing" className="flex items-center space-x-2">
@@ -336,7 +330,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
               </TabsTrigger>
             )}
           </TabsList>
-
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             {/* Quick Stats */}
@@ -351,7 +344,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
                   <p className="text-xs text-muted-foreground">from backend data</p>
                 </CardContent>
               </Card>
-
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Critical Alerts</CardTitle>
@@ -362,7 +354,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
                   <p className="text-xs text-muted-foreground">Require immediate attention</p>
                 </CardContent>
               </Card>
-
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">AI Predictions</CardTitle>
@@ -373,7 +364,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
                   <p className="text-xs text-muted-foreground">Generated</p>
                 </CardContent>
               </Card>
-
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">System Status</CardTitle>
@@ -391,7 +381,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
                 </CardContent>
               </Card>
             </div>
-
             {/* Main Dashboard Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left Column - Vital Signs */}
@@ -405,7 +394,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
                     data={vitals.heartRate}
                     icon={Heart}
                   />
-
                   <VitalSignChart
                     title="Blood Pressure"
                     currentValue={vitals.bloodPressure[vitals.bloodPressure.length - 1]?.value ?? 0}
@@ -414,7 +402,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
                     data={vitals.bloodPressure}
                     icon={Activity}
                   />
-
                   <VitalSignChart
                     title="Temperature"
                     currentValue={vitals.temperature[vitals.temperature.length - 1]?.value ?? 0}
@@ -423,7 +410,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
                     data={vitals.temperature}
                     icon={Thermometer}
                   />
-
                   <VitalSignChart
                     title="Oxygen Saturation"
                     currentValue={vitals.oxygen[vitals.oxygen.length - 1]?.value ?? 0}
@@ -433,13 +419,11 @@ export function Dashboard({ onLogout }: DashboardProps) {
                     icon={Droplets}
                   />
                 </div>
-
                 {/* Alerts Panel */}
                 <div ref={alertsRef}>
                   <AlertsPanel />
                 </div>
               </div>
-
               {/* Right Column */}
               <div className="space-y-6">
                 <PatientOverview />
@@ -448,7 +432,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
               </div>
             </div>
           </TabsContent>
-
           {/* Vitals Tab */}
           <TabsContent value="vitals" className="space-y-6">
             <Card>
@@ -466,7 +449,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
                     data={vitals.heartRate}
                     icon={Heart}
                   />
-
                   <VitalSignChart
                     title="Blood Pressure Trends"
                     currentValue={vitals.bloodPressure[vitals.bloodPressure.length - 1]?.value ?? 0}
@@ -479,7 +461,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
               </CardContent>
             </Card>
           </TabsContent>
-
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-6">
             <Card>
@@ -498,27 +479,23 @@ export function Dashboard({ onLogout }: DashboardProps) {
               </CardContent>
             </Card>
           </TabsContent>
-
           {/* Patients Tab */}
           <TabsContent value="patients" className="space-y-6">
             <PatientManagement userRole={(userProfile.role || "").toLowerCase()} userId={userProfile.id} />
           </TabsContent>
-
           {/* Users Tab (Admin only) */}
           {(userProfile.role || "").toLowerCase() === "admin" && (
             <TabsContent value="users" className="space-y-6">
               <UserManagement userRole={(userProfile.role || "").toLowerCase()} />
             </TabsContent>
           )}
-
-          {/* Appointments Tab (Admin only) */}
-          {(userProfile.role || "").toLowerCase() === "admin" && (
+          {/* Admin or Doctor: Appointments */}
+          {["admin", "doctor"].includes((userProfile.role || "").toLowerCase()) && (
             <TabsContent value="appointments" className="space-y-6">
-              <AppointmentsManagement />
+              <AppointmentsManagement userRole={(userProfile.role || "").toLowerCase()} userId={userProfile.id} />
             </TabsContent>
           )}
-
-          {/* Billing Tab (Admin only) */}
+          {/* Admin: Billing */}
           {(userProfile.role || "").toLowerCase() === "admin" && (
             <TabsContent value="billing" className="space-y-6">
               <BillingManagement />
