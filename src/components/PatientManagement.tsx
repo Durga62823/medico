@@ -105,6 +105,7 @@ export default function PatientManagement({ userRole, userId }: PatientManagemen
   const [newVital, setNewVital] = useState({ heart_rate: '', blood_pressure_systolic: '', blood_pressure_diastolic: '', temperature: '' });
   const [newNote, setNewNote] = useState({ note_type: '', content: '' });
 
+  // This hook fetches patients based on the user's role and ID.
   const { data: apiPatients, isLoading: patientsLoading, isError: patientsError } = useQuery<Patient[]>({
     queryKey: ["patients", userRole, userId],
     queryFn: async () => {
@@ -116,24 +117,36 @@ export default function PatientManagement({ userRole, userId }: PatientManagemen
     },
     staleTime: 60_000,
   });
+
+
   const {
-    data: staffList,
-    isLoading: staffLoading,
-    isError: staffError,
-  } = useQuery<Staff[]>({
-    queryKey: ["staff"],
-    queryFn: async () => {
-      try {
-        const res = await userAPI.getStaffList();
-        return Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
-      } catch (err) {
-        toast.error("Failed to load staff list");
-        return [];  // Fallback to empty
-      }
-    },
-    staleTime: 5 * 60_000,
-  });
-  
+        data: staffList,
+        isLoading: staffLoading,
+        isError: staffError,
+      } = useQuery<Staff[]>({
+        queryKey: ["staff"],
+        queryFn: async () => {
+          try {
+            const res = await userAPI.getStaffList();
+            const staffData = res.data;
+            
+            // Check and shape the data here.
+            if (Array.isArray(staffData)) {
+              return staffData;
+            } else if (staffData && Array.isArray(staffData.data)) {
+              return staffData.data;
+            }
+            
+            // Fallback to an empty array if the expected data is not found.
+            return [];
+          } catch (err) {
+            toast.error("Failed to load staff list");
+            return []; // Always return an empty array on error
+          }
+        },
+        staleTime: 5 * 60_000,
+      });
+  
   const { data: vitals, isLoading: vitalsLoading } = useQuery<Vital[]>({
     queryKey: ["vitals", selectedPatientForModal?.id],
     queryFn: () => vitalAPI.getVitals(selectedPatientForModal!.id!).then(res => res.data),
@@ -146,6 +159,8 @@ export default function PatientManagement({ userRole, userId }: PatientManagemen
     enabled: !!selectedPatientForModal && modalType === 'records',
   });
 
+  // Memoized lists of patients, staff, doctors, and nurses.
+  // This is a good pattern for optimizing your application.
   const patients: Patient[] = useMemo(() => {
     if (!patientsError && apiPatients) {
       return (apiPatients as any[]).map((p) => ({ ...p, id: normalizeId(p) }));
@@ -382,7 +397,7 @@ export default function PatientManagement({ userRole, userId }: PatientManagemen
       discharged: "secondary",
       transferred: "destructive",
     };
-    return <Badge variant={variants[status || "active"] || "default"}>{status || "active"}</Badge>;
+    return <Badge variant={variants[status?.toLowerCase() || "active"] || "default"}>{status || "active"}</Badge>;
   };
 
   const getAssignedStaffName = (staffId?: string) => {
@@ -709,6 +724,14 @@ export default function PatientManagement({ userRole, userId }: PatientManagemen
                         <Label htmlFor="temperature">Temperature (C)</Label>
                         <Input id="temperature" type="number" value={newVital.temperature} onChange={(e) => setNewVital({ ...newVital, temperature: e.target.value })} />
                       </div>
+                      <div>
+                        <Label htmlFor="systolic">Blood Pressure (Systolic)</Label>
+                        <Input id="systolic" type="number" value={newVital.blood_pressure_systolic} onChange={(e) => setNewVital({ ...newVital, blood_pressure_systolic: e.target.value })} />
+                      </div>
+                      <div>
+                        <Label htmlFor="diastolic">Blood Pressure (Diastolic)</Label>
+                        <Input id="diastolic" type="number" value={newVital.blood_pressure_diastolic} onChange={(e) => setNewVital({ ...newVital, blood_pressure_diastolic: e.target.value })} />
+                      </div>
                     </div>
                     <Button type="submit" className="mt-4">Record Vital</Button>
                   </form>
@@ -726,6 +749,8 @@ export default function PatientManagement({ userRole, userId }: PatientManagemen
                           <TableRow>
                             <TableHead className="min-w-[100px]">Date</TableHead>
                             <TableHead className="min-w-[120px]">Heart Rate</TableHead>
+                            <TableHead className="min-w-[120px]">BP (S)</TableHead>
+                            <TableHead className="min-w-[120px]">BP (D)</TableHead>
                             <TableHead className="min-w-[120px]">Temperature</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -734,6 +759,8 @@ export default function PatientManagement({ userRole, userId }: PatientManagemen
                             <TableRow key={v._id}>
                               <TableCell>{new Date(v.recorded_at).toLocaleDateString()}</TableCell>
                               <TableCell>{v.heart_rate}</TableCell>
+                              <TableCell>{v.blood_pressure_systolic}</TableCell>
+                              <TableCell>{v.blood_pressure_diastolic}</TableCell>
                               <TableCell>{v.temperature}</TableCell>
                             </TableRow>
                           ))}
@@ -762,14 +789,20 @@ export default function PatientManagement({ userRole, userId }: PatientManagemen
                         <SelectContent>
                           <SelectItem value="diagnosis">Diagnosis</SelectItem>
                           <SelectItem value="treatment">Treatment</SelectItem>
-                          <SelectItem value="observation">Observation</SelectItem>
-                          <SelectItem value="prescription">Prescription</SelectItem>
+                          <SelectItem value="progress">Progress</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2 mb-4">
                       <Label htmlFor="content">Content</Label>
-                      <Textarea id="content" value={newNote.content} onChange={(e) => setNewNote({ ...newNote, content: e.target.value })} />
+                      <Textarea
+                        id="content"
+                        value={newNote.content}
+                        onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
+                        placeholder="Enter note content"
+                        rows={5}
+                      />
                     </div>
                     <Button type="submit">Add Note</Button>
                   </form>
@@ -781,16 +814,27 @@ export default function PatientManagement({ userRole, userId }: PatientManagemen
                 </CardHeader>
                 <CardContent>
                   {notesLoading ? <p>Loading...</p> : (
-                    <div className="space-y-4">
-                      {notes?.length === 0 && <p>No notes found.</p>}
-                      {notes?.map((note) => (
-                        <div key={note._id} className="p-4 border rounded-md">
-                          <p className="text-sm text-gray-500">{new Date(note.created_at).toLocaleString()}</p>
-                          <p className="font-bold">{note.note_type}</p>
-                          <p className="mt-2">{note.content}</p>
-                          <p className="text-xs mt-2 text-gray-400">by {note.author.full_name} ({note.author.role})</p>
-                        </div>
-                      ))}
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="min-w-[100px]">Date</TableHead>
+                            <TableHead className="min-w-[120px]">Type</TableHead>
+                            <TableHead className="min-w-[200px]">Content</TableHead>
+                            <TableHead className="min-w-[150px]">Author</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {notes?.map((n) => (
+                            <TableRow key={n._id}>
+                              <TableCell>{new Date(n.created_at).toLocaleDateString()}</TableCell>
+                              <TableCell>{n.note_type}</TableCell>
+                              <TableCell>{n.content}</TableCell>
+                              <TableCell>{n.author.full_name}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
                     </div>
                   )}
                 </CardContent>
@@ -799,98 +843,87 @@ export default function PatientManagement({ userRole, userId }: PatientManagemen
           )}
         </DialogContent>
       </Dialog>
-
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm Action</DialogTitle>
-            <DialogDescription>
-              {confirmMessage}
-            </DialogDescription>
+            <DialogDescription>{confirmMessage}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setConfirmDialogOpen(false);
-              setConfirmAction(null);
-            }}>
+            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => {
-              if (confirmAction) {
-                confirmAction();
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (confirmAction) confirmAction();
                 setConfirmDialogOpen(false);
                 setConfirmAction(null);
-              }
-            }}>
+              }}
+            >
               Confirm
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle>Patients List</CardTitle>
-          <div className="flex space-x-2">
-            <Users className="h-5 w-5 text-gray-500" />
-            <span className="text-sm font-medium">({patients.length})</span>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Patient ID</TableHead>
-                  <TableHead>Full Name</TableHead>
-                  <TableHead>Assigned Doctor</TableHead>
-                  <TableHead>Assigned Nurse</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {patients.length === 0 ? (
+      <Card className="mt-6">
+        <CardContent className="p-0">
+          {patientsLoading ? (
+            <div className="p-6 text-center">Loading patients...</div>
+          ) : patients.length === 0 ? (
+            <div className="p-6 text-center text-muted-foreground">No patients found.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center">
-                      No patients found.
-                    </TableCell>
+                    <TableHead>Patient ID</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Assigned Doctor</TableHead>
+                    <TableHead>Assigned Nurse</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ) : (
-                  patients.map((patient) => (
-                    <TableRow key={patient.id || patient.patient_id}>
-                      <TableCell>{patient.patient_id}</TableCell>
+                </TableHeader>
+                <TableBody>
+                  {patients.map((patient) => (
+                    <TableRow key={patient.id}>
+                      <TableCell className="font-medium">{patient.patient_id || patient.id}</TableCell>
                       <TableCell>{patient.full_name}</TableCell>
+                      <TableCell>{getStatusBadge(patient.status)}</TableCell>
                       <TableCell>{getAssignedStaffName(patient.assigned_doctor)}</TableCell>
                       <TableCell>{getAssignedStaffName(patient.assigned_nurse)}</TableCell>
-                      <TableCell>{getStatusBadge(patient.status)}</TableCell>
-                      <TableCell className="flex space-x-2 justify-end">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(patient)} disabled={userRole === 'patient'}>
+                      <TableCell className="text-right flex space-x-2">
+                        <Button variant="outline" size="icon" onClick={() => handleEdit(patient)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => openModal(patient, 'vitals')}>
-                          <HeartPulse className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => openModal(patient, 'records')}>
-                          <Notebook className="h-4 w-4" />
-                        </Button>
-                        {userRole === "admin" && (
-                          <Button variant="ghost" size="icon" onClick={() => handleDischarge(patient)} disabled={patient.status === 'discharged'}>
+                        {(userRole === "doctor" || userRole === "admin") && (
+                          <Button variant="outline" size="icon" onClick={() => openModal(patient, 'vitals')}>
+                            <HeartPulse className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {(userRole === "nurse" || userRole === "admin") && (
+                          <Button variant="outline" size="icon" onClick={() => openModal(patient, 'records')}>
+                            <Notebook className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {userRole === "admin" && patient.status !== "discharged" && (
+                          <Button variant="outline" size="icon" onClick={() => handleDischarge(patient)}>
                             <Archive className="h-4 w-4" />
                           </Button>
                         )}
                         {userRole === "admin" && (
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(patient)}>
-                            <Trash2 className="h-4 w-4 text-red-500" />
+                          <Button variant="outline" size="icon" onClick={() => handleDelete(patient)}>
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

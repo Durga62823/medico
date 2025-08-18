@@ -118,6 +118,7 @@ export default function AppointmentsManagement() {
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log(form)
     if (isEdit && editingId) {
       updateMutation.mutate({ id: editingId, payload: form });
     } else {
