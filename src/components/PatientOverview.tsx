@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { User, Calendar, Phone, Mail, MapPin, AlertCircle, CheckCircle, Clock } from "lucide-react";
-
+import { useParams } from "react-router-dom";
 type StatusKind = "stable" | "monitoring" | "critical";
 type RiskKind = "low" | "medium" | "high";
 

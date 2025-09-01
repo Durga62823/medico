@@ -67,7 +67,7 @@ export const authAPI = {
   login: (data: LoginPayload) => api.post<AuthResponse>('/auth/login', data),
 };
 
-// User profile endpoint
+
 export const userAPI = {
   profile: () => api.get<any>('/users/profile'),
   getAllUsers: () => api.get<any[]>('/users'),
@@ -79,7 +79,7 @@ export const userAPI = {
 
 };
 
-// Patient management endpoints (aligned with backend routes)
+
 export const patientAPI = {
   getAllPatients: (filters: { assigned_doctor?: string; assigned_nurse?: string; status?: string } = {}) =>
     api.get<any[]>('/patients', { params: filters }),
@@ -89,14 +89,14 @@ export const patientAPI = {
   deletePatient: (id: string) => api.delete(`/patients/${id}`),
 };
 
-// Vital signs endpoints (aligned with backend routes)
+// Vital signs endpoints 
 export const vitalAPI = {
   getVitals: (patientId: string) => api.get<any[]>(`/patients/${patientId}/vitals`),
   recordVitals: (patientId: string, data: any) => api.post(`/patients/${patientId}/vitals`, data),
   getTrends: (patientId: string) => api.get<any>(`/patients/${patientId}/vitals/trends`),
 };
 
-// Medical notes endpoints (aligned with backend routes)
+// Medical notes endpoints
 export const noteAPI = {
   getNotes: (patientId: string, filters: { note_type?: string; date?: string; search?: string } = {}) => 
     api.get(`/patients/${patientId}/notes`, { params: filters }),
