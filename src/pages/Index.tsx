@@ -1,30 +1,62 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dashboard } from "@/components/Dashboard";
+import DoctorDashboard from "@/components/doctor/DoctorDashboard";
+import { userAPI } from "@/services/api";
 
-// Using token from localStorage instead of a custom session object
+const safeJSONParse = (value: string | null) => {
+  if (!value || value === "undefined" || value === "null") return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+};
 
 const Index = () => {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [role, setRole] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // Fetch token and user data (e.g. from localStorage or API)
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
-    if (storedToken) {
-      setToken(storedToken);
-    } else {
-      navigate("/auth"); // Redirect to login if no auth
+    if (!storedToken) {
+      navigate("/auth");
+      return;
     }
-    setLoading(false);
+    setToken(storedToken);
+
+    const fetchUserRole = async () => {
+      try {
+        const localUser = safeJSONParse(localStorage.getItem("user"));
+        if (localUser?.role) {
+          setRole(localUser.role);
+        } else {
+          const response = await userAPI.profile();
+          if (response.data?.role) {
+            setRole(response.data.role);
+            localStorage.setItem("user", JSON.stringify(response.data));
+          } else {
+            throw new Error("No role found");
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user role:", error);
+        navigate("/auth");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserRole();
   }, [navigate]);
 
   const handleLogout = () => {
-    localStorage.removeItem("session"); // legacy cleanup
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setToken(null);
+    setRole(null);
     navigate("/auth");
   };
 
@@ -32,18 +64,22 @@ const Index = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-medical-primary/10 via-background to-medical-secondary/10 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-medical-primary mx-auto"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-medical-primary border-solid mx-auto"></div>
           <p className="mt-4 text-medical-text">Loading...</p>
         </div>
       </div>
     );
   }
 
-  if (!token) {
-    return null; 
-  }
-
-  return <Dashboard onLogout={handleLogout} />;
-};
+  if (!token) return null;
+  if (role === "doctor") 
+    { return <DoctorDashboard />; } 
+  else if (role === "admin") {
+    return <Dashboard onLogout={handleLogout} />; } 
+  else if (role === "Nurse") { 
+    return <div>Nurse Dashboard Coming Soon</div>; } 
+  else {
+    return <div>Unauthorized Access</div>; 
+} };
 
 export default Index;

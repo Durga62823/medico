@@ -22,11 +22,11 @@ import { AlertsPanel } from "./AlertsPanel";
 import { AIAssistant } from "./AIAssistant";
 import { PatientOverview } from "./PatientOverview";
 import PatientManagement from "./PatientManagement";
-import UserManagement from "./UserManagement";
-import AppointmentsManagement from "./AppointmentsManagement";
-import BillingManagement from "./BillingManagement";
-import NotesSection from "@/components/NotesSection";
-import DoctorDashboard from "./DoctorDashboard"; // NEW: Import the doctor-specific dashboard
+import UserManagement from "./admin/UserManagement";
+import AppointmentsManagement from "./admin/AppointmentsManagement";
+import BillingManagement from "./admin/BillingManagement";
+import NotesSection from "./admin/NotesSection";
+import DoctorDashboard from "./doctor/DoctorDashboard"; // NEW: Import the doctor-specific dashboard
 import {
   Heart,
   Activity,
@@ -236,9 +236,9 @@ export function Dashboard({ onLogout }: DashboardProps) {
   }
 
   // NEW: Conditional rendering for Doctor role - Use DoctorDashboard
-  if ((userProfile.role || "").toLowerCase() === "doctor") {
-    return <DoctorDashboard />;
-  }
+  // if ((userProfile.role || "").toLowerCase() === "doctor") {
+  //   return <DoctorDashboard />;
+  // }
 
   // Original dashboard for other roles
   return (
@@ -288,7 +288,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
           </div>
         </div>
       </header>
-      {/* Main Content */}
+
       <div className="container mx-auto p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:grid-cols-5">
@@ -296,14 +296,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
               <Home className="w-4 h-4" />
               <span className="hidden sm:inline">Overview</span>
             </TabsTrigger>
-            <TabsTrigger value="vitals" className="flex items-center space-x-2">
-              <Activity className="w-4 h-4" />
-              <span className="hidden sm:inline">Vitals</span>
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center space-x-2">
-              <BarChart3 className="w-4 h-4" />
-              <span className="hidden sm:inline">Analytics</span>
-            </TabsTrigger>
+          
             <TabsTrigger value="patients" className="flex items-center space-x-2">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Patients</span>
@@ -316,7 +309,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
               </TabsTrigger>
             )}
             {/* Admin or Doctor: Appointments */}
-            {["admin", "doctor"].includes((userProfile.role || "").toLowerCase()) && (
+            {["admin"].includes((userProfile.role || "").toLowerCase()) && (
               <TabsTrigger value="appointments" className="flex items-center space-x-2">
                 <Activity className="w-4 h-4" />
                 <span className="hidden sm:inline">Appointments</span>
@@ -381,9 +374,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
                 </CardContent>
               </Card>
             </div>
-            {/* Main Dashboard Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column - Vital Signs */}
               <div className="lg:col-span-2 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <VitalSignChart
@@ -419,12 +410,10 @@ export function Dashboard({ onLogout }: DashboardProps) {
                     icon={Droplets}
                   />
                 </div>
-                {/* Alerts Panel */}
                 <div ref={alertsRef}>
                   <AlertsPanel />
                 </div>
               </div>
-              {/* Right Column */}
               <div className="space-y-6">
                 <PatientOverview />
                 <NotesSection patientId={selectedId} userRole={(userProfile.role || "").toLowerCase()} />
@@ -433,52 +422,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
             </div>
           </TabsContent>
           {/* Vitals Tab */}
-          <TabsContent value="vitals" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Detailed Vital Signs Monitoring</CardTitle>
-                <CardDescription>Real-time health metrics with AI-powered anomaly detection</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <VitalSignChart
-                    title="Heart Rate Variability"
-                    currentValue={vitals.heartRate[vitals.heartRate.length - 1]?.value ?? 0}
-                    unit="BPM"
-                    normalRange={[60, 100]}
-                    data={vitals.heartRate}
-                    icon={Heart}
-                  />
-                  <VitalSignChart
-                    title="Blood Pressure Trends"
-                    currentValue={vitals.bloodPressure[vitals.bloodPressure.length - 1]?.value ?? 0}
-                    unit="mmHg"
-                    normalRange={[90, 120]}
-                    data={vitals.bloodPressure}
-                    icon={Activity}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          {/* Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Health Analytics & Predictions</CardTitle>
-                <CardDescription>AI-driven insights and predictive health modeling</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12">
-                  <BarChart3 className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">Advanced Analytics Coming Soon</h3>
-                  <p className="text-muted-foreground">
-                    Machine learning models for predictive health analytics and trend analysis
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+
           {/* Patients Tab */}
           <TabsContent value="patients" className="space-y-6">
             <PatientManagement userRole={(userProfile.role || "").toLowerCase()} userId={userProfile.id} />
@@ -490,7 +434,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
             </TabsContent>
           )}
           {/* Admin or Doctor: Appointments */}
-          {["admin", "doctor"].includes((userProfile.role || "").toLowerCase()) && (
+          {["admin"].includes((userProfile.role || "").toLowerCase()) && (
             <TabsContent value="appointments" className="space-y-6">
               <AppointmentsManagement userRole={(userProfile.role || "").toLowerCase()} userId={userProfile.id} />
             </TabsContent>
