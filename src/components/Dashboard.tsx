@@ -56,12 +56,12 @@ interface UserProfile {
 // Fallback data used when APIs fail or are not available.
 // Keeps charts functional during development.
 const fallbackHeartRate = [
-  { time: "12:00", value: 72 },
+  { time: "12:00", value: 100 },
   { time: "12:15", value: 75 },
   { time: "12:30", value: 73 },
   { time: "12:45", value: 78 },
   { time: "1:00", value: 76 },
-  { time: "1:15", value: 74 },
+  { time: "1:15", value: 14 },
 ];
 
 const fallbackBloodPressure = [

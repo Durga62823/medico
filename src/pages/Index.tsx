@@ -3,6 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { Dashboard } from "@/components/Dashboard";
 import DoctorDashboard from "@/components/doctor/DoctorDashboard";
 import { userAPI } from "@/services/api";
+// import { PatientPreview } from "@/components/doctor/PatientPreview";
+// import { AppointmentTimeline } from "@/components/doctor/AppointmentTimeline";
+// import { PatientPreview } from "@/components/doctor/PatientPreview";
+
 
 const safeJSONParse = (value: string | null) => {
   if (!value || value === "undefined" || value === "null") return null;
@@ -18,6 +22,8 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  const [selectedPatient, setSelectedPatient] = useState("68a2ca62fe11a3ad9d1ecb99");
 
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
@@ -73,7 +79,7 @@ const Index = () => {
 
   if (!token) return null;
   if (role === "doctor") 
-    { return <DoctorDashboard />; } 
+     return <DoctorDashboard /> 
   else if (role === "admin") {
     return <Dashboard onLogout={handleLogout} />; } 
   else if (role === "Nurse") { 

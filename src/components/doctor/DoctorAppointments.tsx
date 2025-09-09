@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Calendar } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox"; // ✅ added checkbox
 import { toast } from "react-toastify";
 import { motion } from "framer-motion";
 
@@ -52,6 +52,9 @@ const appointmentAPI = {
 
   updateAppointment: async (id: string, updates: Record<string, unknown>) => {
     const token = localStorage.getItem("token");
+    console.log("Updating appointment with ID:", id);
+  
+    
     const response = await fetch(`${API_BASE_URL}/api/appointments/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -67,7 +70,7 @@ const DoctorAppointments = () => {
   const queryClient = useQueryClient();
   const user = getStoredUser();
   const doctorId = user?.id || "";
-
+console.log("Doctor ID:", doctorId);
   const { data: appointments = [], isLoading, isError } = useQuery({
     queryKey: ["doctorAppointments", doctorId],
     queryFn: async () => {
@@ -104,7 +107,9 @@ const DoctorAppointments = () => {
   const todayAppointments = useMemo(() => {
     const today = new Date();
     return appointments.filter(
-      (apt: any) => new Date(apt.appointment_date).toDateString() === today.toDateString() && apt.status !== "cancelled"
+      (apt: any) =>
+        new Date(apt.appointment_date).toDateString() === today.toDateString() &&
+        apt.status !== "cancelled"
     );
   }, [appointments]);
 
@@ -116,16 +121,16 @@ const DoctorAppointments = () => {
     const displayHour = hourNum % 12 || 12;
     return `${displayHour}:${minute} ${ampm}`;
   };
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-  if (isError) return <p className="text-red-500">Failed to load appointments.</p>;
 
   return (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold">Today's Schedule</h3>
         <p className="text-sm text-muted-foreground">
-          {todayAppointments.filter((a) => a.status === "scheduled").length} upcoming •{" "}
-          {todayAppointments.filter((a) => a.status === "completed").length} completed
+          {todayAppointments.filter((a) => a.status === "scheduled").length} Upcoming •{" "}
+          {todayAppointments.filter((a) => a.status === "completed").length} Completed •{" "}
         </p>
       </div>
 
@@ -134,9 +139,9 @@ const DoctorAppointments = () => {
 
         {todayAppointments.length > 0 ? (
           todayAppointments
-          .filter((apt: any) => apt.appointment_time) // remove missing time
-          .sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
-          .map((apt: any) =>(
+            .filter((apt: any) => apt.appointment_time) // remove missing time
+            .sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
+            .map((apt: any) => (
               <motion.div
                 key={apt._id}
                 initial={{ opacity: 0, y: 20 }}
@@ -147,7 +152,9 @@ const DoctorAppointments = () => {
                 <Card className="shadow-sm hover:shadow-md transition-all">
                   <CardContent className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-4 flex-1">
-                      <div className="text-lg font-bold text-primary">{formatTime(apt.appointment_time)}</div>
+                      <div className="text-lg font-bold text-primary">
+                        {formatTime(apt.appointment_time)}
+                      </div>
                       <Avatar className="h-10 w-10">
                         <AvatarFallback>
                           {apt.patient_id?.full_name
@@ -159,19 +166,26 @@ const DoctorAppointments = () => {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-semibold">{apt.patient_id?.full_name}</span>
-                          <Badge>{apt.status}</Badge>
+                          <Badge>{capitalize(apt.status)}</Badge>
+
                         </div>
-                        <p className="text-sm text-muted-foreground">{apt.notes || "No notes available"}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {apt.notes || "No notes available"}
+                        </p>
                       </div>
                     </div>
-                    {apt.status === "scheduled" && (
-                      <Button
-                        onClick={() => updateAppointmentMutation.mutate({ id: apt._id, newStatus: "completed" })}
-                        disabled={updateAppointmentMutation.isPending}
-                      >
-                        {updateAppointmentMutation.isPending ? "Completing..." : "Complete"}
-                      </Button>
-                    )}
+
+                    {/* ✅ Checkbox instead of Complete button */}
+                    <Checkbox
+                      checked={apt.status === "completed"}
+                      onCheckedChange={(checked) =>
+                        updateAppointmentMutation.mutate({
+                          id: apt._id,
+                          newStatus: checked ? "completed" : "scheduled",
+                        })
+                      }
+                      disabled={updateAppointmentMutation.isPending}
+                    />
                   </CardContent>
                 </Card>
               </motion.div>

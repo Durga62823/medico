@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Clock, User } from "lucide-react";
-import { io, Socket } from "socket.io-client";
-import { Button } from "@/components/ui/button";
+import { io } from "socket.io-client";
 
 export interface Appointment {
   id: string;
@@ -10,134 +9,166 @@ export interface Appointment {
   time: string;
   reason: string;
   appointment_date: string;
-  status: "upcoming" | "checked-in" | "in-progress" | "completed";
+  status: "upcoming" | "checked-in" | "in-progress" | "completed" | "scheduled";
   hasAllergies?: boolean;
 }
 
 interface AppointmentTimelineProps {
-  onAppointmentClick: (appointment: Appointment) => void;
+  onAppointmentClick?: (appointment: Appointment) => void; // optional
 }
 
 const API_BASE_URL = "http://localhost:5000";
 
-// Decode JWT for doctor ID
-function getDoctorIdFromToken(): string | null {
-  if (typeof window === "undefined") return null;
-  const token = localStorage.getItem("token");
+function decodeToken(token?: string | null) {
   if (!token) return null;
   try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.id || null;
+    const base64Payload = token.split(".")[1];
+    const jsonPayload = atob(base64Payload);
+    return JSON.parse(jsonPayload);
   } catch {
     return null;
   }
 }
 
-// API
+function getDoctorId() {
+  if (typeof window === "undefined") return null;
+  const token = localStorage.getItem("token");
+  const userPayload = decodeToken(token);
+  return userPayload?.id || null;
+}
+
 const appointmentAPI = {
-  getAppointments: async ({ staff_id }: { staff_id: string }) => {
+  getAppointments: async (staff_id: string) => {
     const token = localStorage.getItem("token");
     if (!token || !staff_id) throw new Error("Missing token or staff_id");
     const res = await fetch(`${API_BASE_URL}/api/appointments?staff_id=${staff_id}`, {
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
     });
-    if (!res.ok) throw new Error("Failed to fetch appointments");
+    if (!res.ok) throw new Error("Failed to fetch");
     return res.json();
-  }
+  },
+  updateAppointment: async (id: string, updates: Record<string, unknown>) => {
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${API_BASE_URL}/api/appointments/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) throw new Error("Failed to update");
+    return res.json();
+  },
 };
 
 export const AppointmentTimeline = ({ onAppointmentClick }: AppointmentTimelineProps) => {
   const queryClient = useQueryClient();
-  const [doctorId, setDoctorId] = useState<string | null>(null);
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const doctorId = getDoctorId();
 
-  useEffect(() => {
-    const id = getDoctorIdFromToken();
-    if (id) setDoctorId(id);
-  }, []);
+  const today = new Date().toISOString().slice(0, 10); // e.g. "2025-09-07"
 
-  const today = new Date().toISOString().split("T")[0];
-
-  // Fetch appointments
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ["doctorAppointments", doctorId],
     queryFn: async () => {
       if (!doctorId) return [];
-      console.log("Fetching appointments for doctorId:", doctorId);
-
-      const res = await appointmentAPI.getAppointments({ staff_id: doctorId });
-      console.log("Raw API response:", res);
-
-      // Map API response to frontend format
-      const mappedAppointments = (res.data ?? []).map((apt: any) => ({
-        id: apt._id,
-        patientName: apt.patient_id?.full_name || "Unknown",
-        time: apt.appointment_time,
-        reason: apt.notes || apt.appointment_type || "",
-        appointment_date: apt.appointment_date,
-        status: apt.status === "scheduled" ? "upcoming" : apt.status,
-      }));
-
-      console.log("Mapped appointments:", mappedAppointments);
-      return mappedAppointments;
+      const res = await appointmentAPI.getAppointments(doctorId);
+      const rawAppointments = res.data ?? res; // depends on backend response structure
+      return rawAppointments
     },
     enabled: !!doctorId,
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 
-  // WebSocket to update appointments in real-time
   useEffect(() => {
     if (!doctorId) return;
-    const socketInstance = io(API_BASE_URL, {
+    const socket = io(API_BASE_URL, {
       auth: { token: localStorage.getItem("token") },
     });
-    setSocket(socketInstance);
-
-    socketInstance.on("appointment:created", () => {
-      console.log("Socket: appointment created");
-      queryClient.invalidateQueries(["doctorAppointments", doctorId]);
-    });
-
-    socketInstance.on("appointment:updated", () => {
-      console.log("Socket: appointment updated");
-      queryClient.invalidateQueries(["doctorAppointments", doctorId]);
-    });
-
-    return () => socketInstance.disconnect();
+    const invalidate = () => queryClient.invalidateQueries(["doctorAppointments", doctorId]);
+    socket.on("appointment:created", invalidate);
+    socket.on("appointment:updated", invalidate);
+    socket.on("appointment:deleted", invalidate);
+    return () => socket.disconnect();
   }, [doctorId, queryClient]);
 
-  // Only show **next upcoming appointment for today**
-  const currentAppointment = appointments
-    .filter((apt) => apt.status === "upcoming" && apt.appointment_date === today)
-    .sort((a, b) => a.time.localeCompare(b.time))[0];
+  const currentAppointment = useMemo(() => {
+    if (!appointments.length) return undefined;
 
-  console.log("Current Appointment:", currentAppointment);
+    const now = new Date();
 
+    // Filter for appointments today with status upcoming/scheduled, and time >= now if time present
+    const todaysAppointments = appointments.filter(apt => {
+      const aptDateStr = new Date(apt.appointment_date).toISOString().slice(0,10);
+      if (!(apt.status === "upcoming" || apt.status === "scheduled")) return false;
+      if (aptDateStr !== today) return false;
+      if (!apt.time) return true; // no time means assume all day? Include it
+      // Parse appointment date+time reliably
+      const aptDateTime = new Date(`${apt.appointment_date}T${apt.time}`);
+      return aptDateTime >= now;
+    });
+
+    // Sort ascending by date+time
+    return todaysAppointments.sort((a,b) => {
+      const aTime = new Date(`${a.appointment_date}T${a.time || "00:00"}`).getTime();
+      const bTime = new Date(`${b.appointment_date}T${b.time || "00:00"}`).getTime();
+      return aTime - bTime;
+    })[0];
+  }, [appointments, today]);
+console.log("Current Appointment:", currentAppointment);
   if (isLoading) return <div className="p-6 text-center">Loading...</div>;
-
+  const formatTime = (time: string) => {
+    if (!time) return "";
+    const [hour, minute] = time.split(":");
+    const hourNum = parseInt(hour, 10);
+    const ampm = hourNum >= 12 ? "PM" : "AM";
+    const displayHour = hourNum % 12 || 12;
+    return `${displayHour}:${minute} ${ampm}`;
+  };
   return (
     <div className="glass p-6 rounded-xl">
       <h2 className="text-xl font-semibold flex items-center gap-2 mb-4">
         <Clock className="h-5 w-5" /> Current Appointment
       </h2>
+{currentAppointment ? (
+  <div
+    className="p-4 border rounded-lg cursor-pointer hover:shadow-md transition-shadow"
+    onClick={() => onAppointmentClick?.(currentAppointment)}
+  >
+    <div className="flex items-center justify-between mb-2">
+      <span className="font-semibold text-black">{formatTime(currentAppointment.appointment_time)}</span>
+      <span className="text-xl text-white rounded-full  font-medium bg-black">{currentAppointment.status}</span>
+    </div>
+    <div className="flex items-center gap-2 mb-3">
+      <User className="w-5 h-5 text-black" />
+      <span className="text-lg font-bold text-black">{currentAppointment.patient_id.full_name}</span>
+    </div>
+    <div className="mb-2 text-sm ">
+      Appointment Type:
+      <span className="font-medium text-red-600">
+      {currentAppointment.appointment_type || 'General Consultation'}
+      </span>
+    </div>
+    <div className="mb-3 text-sm text-black">
+      {currentAppointment.notes || 'No notes available.'}
+    </div>
+    <div className="text-lg font-semibold text-black">
+      Duration: {currentAppointment.duration_minutes} mins
+    </div>
+  </div>
+) : (
+  <div className="p-4 border rounded-lg text-center text-black">
+    <p className="text-base font-medium">No upcoming appointments for today.</p>
+    <p className="text-sm">You are all caught up!</p>
+  </div>
+)}
 
-      {currentAppointment ? (
-        <div
-          className="p-4 border rounded-lg cursor-pointer hover:shadow-md"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="font-medium">{currentAppointment.time}</span>
-          </div>
-          <div className="flex items-center gap-2 mb-1">
-            <User className="h-4 w-4 text-muted-foreground" />
-            <span>{currentAppointment.patientName}</span>
-          </div>
-          <div className="text-sm text-muted-foreground">{currentAppointment.reason}</div>
-        </div>
-      ) : (
-        <div className="text-center text-muted-foreground mb-4">No upcoming appointments for today.</div>
-      )}
 
-  
+
     </div>
   );
 };

@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogClose,
 } from "@/components/ui/dialog";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
@@ -15,32 +16,36 @@ interface PatientDetailsDialogProps {
 }
 
 export default function PatientDetailsDialog({ patientId, onClose }: PatientDetailsDialogProps) {
-  // Fetch patient details
-  const { data: patient } = useQuery({
-    queryKey: ["patientDetails", patientId],
-    queryFn: async () => {
-      const res = await patientAPI.getPatient(patientId);
-      return res.data;
-    },
-  });
+// Fetch patient details
+const { data: patient } = useQuery({
+  queryKey: ["patientDetails", patientId],
+  queryFn: async () => {
+    const res = await patientAPI.getPatient(patientId);
+    return res.data;
+  },
+  enabled: !!patientId, // ⬅️ only fetch if patientId exists
+});
 
-  // Fetch vitals history
-  const { data: vitals } = useQuery({
-    queryKey: ["patientVitals", patientId],
-    queryFn: async () => {
-      const res = await vitalAPI.getVitals(patientId);
-      return res.data;
-    },
-  });
+// Fetch vitals history
+const { data: vitals } = useQuery({
+  queryKey: ["patientVitals", patientId],
+  queryFn: async () => {
+    const res = await vitalAPI.getVitals(patientId);
+    return res.data;
+  },
+  enabled: !!patientId,
+});
 
-  // Fetch vitals trends for charts
-  const { data: trends } = useQuery({
-    queryKey: ["patientTrends", patientId],
-    queryFn: async () => {
-      const res = await vitalAPI.getTrends(patientId);
-      return res.data;
-    },
-  });
+// Fetch vitals trends
+const { data: trends } = useQuery({
+  queryKey: ["patientTrends", patientId],
+  queryFn: async () => {
+    const res = await vitalAPI.getTrends(patientId);
+    return res.data;
+  },
+  enabled: !!patientId,
+});
+
 
   return (
     <Dialog open={true} onOpenChange={onClose}>

@@ -1,69 +1,62 @@
 import { useState } from "react";
-import { Navigation } from "@/components/Navigation";
-import { PatientPreview } from "@/components/PatientPreview";
-import { Appointment } from "@/components/AppointmentTimeline";
+import { Navigation } from "@/components/doctor/Navigation";
+import { PatientPreview } from "@/components/doctor/PatientPreview";
 import { 
   User, 
   Search, 
   Filter, 
   Heart, 
   AlertTriangle, 
-  Activity,
-  Calendar,
-  Clock
+  Activity
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 
-const mockPatients: Appointment[] = [
+type Patient = {
+  id: string;
+  name: string;
+  condition: string;
+  hasAllergies?: boolean;
+};
+
+const mockPatients: Patient[] = [
   {
-    id: '1',
-    patientName: 'John Doe',
-    time: '9:15 AM',
-    reason: 'Hypertension Follow-up',
-    status: 'checked-in',
-    hasAllergies: true
+    id: "1",
+    name: "John Doe",
+    condition: "Hypertension",
+    hasAllergies: true,
   },
   {
-    id: '2',
-    patientName: 'Emma Wilson',
-    time: '9:45 AM',
-    reason: 'Annual Physical',
-    status: 'upcoming'
+    id: "2",
+    name: "Emma Wilson",
+    condition: "Annual Physical",
   },
   {
-    id: '3',
-    patientName: 'Michael Brown',
-    time: '10:30 AM',
-    reason: 'Knee Pain Evaluation',
-    status: 'upcoming',
-    hasAllergies: true
+    id: "3",
+    name: "Michael Brown",
+    condition: "Knee Pain",
+    hasAllergies: true,
   },
   {
-    id: '4',
-    patientName: 'Lisa Garcia',
-    time: '11:15 AM',
-    reason: 'Diabetes Management',
-    status: 'upcoming'
+    id: "4",
+    name: "Lisa Garcia",
+    condition: "Diabetes",
   },
   {
-    id: '5',
-    patientName: 'Thomas Anderson',
-    time: '2:00 PM',
-    reason: 'Chest Pain Consultation',
-    status: 'upcoming',
-    hasAllergies: true
-  }
+    id: "5",
+    name: "Thomas Anderson",
+    condition: "Chest Pain",
+    hasAllergies: true,
+  },
 ];
 
 const PatientsPage = () => {
-  const [selectedPatient, setSelectedPatient] = useState<Appointment | null>(mockPatients[0]);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(mockPatients[0]);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredPatients = mockPatients.filter(patient =>
-    patient.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.reason.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredPatients = mockPatients.filter((patient) =>
+    patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    patient.condition.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -122,50 +115,29 @@ const PatientsPage = () => {
                     onClick={() => setSelectedPatient(patient)}
                     className={`p-4 rounded-xl border cursor-pointer transition-all duration-200 medical-card-hover ${
                       selectedPatient?.id === patient.id 
-                        ? 'glass-primary border-primary/30 shadow-lg' 
-                        : 'glass hover:glass-secondary border-border'
+                        ? "glass-primary border-primary/30 shadow-lg" 
+                        : "glass hover:glass-secondary border-border"
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${
-                          selectedPatient?.id === patient.id ? 'gradient-primary' : 'bg-muted/50'
+                          selectedPatient?.id === patient.id ? "gradient-primary" : "bg-muted/50"
                         }`}>
-                          <User className={`h-4 w-4 ${
-                            selectedPatient?.id === patient.id ? 'text-white' : 'text-muted-foreground'
-                          }`} />
+                          <User
+                            className={`h-4 w-4 ${
+                              selectedPatient?.id === patient.id ? "text-white" : "text-muted-foreground"
+                            }`}
+                          />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-foreground">{patient.patientName}</h3>
-                          <p className="text-sm text-muted-foreground">{patient.reason}</p>
+                          <h3 className="font-semibold text-foreground">{patient.name}</h3>
+                          <p className="text-sm text-muted-foreground">{patient.condition}</p>
                         </div>
                       </div>
                       {patient.hasAllergies && (
                         <AlertTriangle className="h-4 w-4 text-warning" />
                       )}
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {patient.time}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          Today
-                        </span>
-                      </div>
-                      <Badge 
-                        variant="outline" 
-                        className={`${
-                          patient.status === 'checked-in' 
-                            ? 'bg-status-checked-in/10 text-status-checked-in border-status-checked-in/20'
-                            : 'bg-status-upcoming/10 text-status-upcoming border-status-upcoming/20'
-                        }`}
-                      >
-                        {patient.status === 'checked-in' ? 'Ready' : 'Scheduled'}
-                      </Badge>
                     </div>
                   </div>
                 ))}
@@ -173,15 +145,17 @@ const PatientsPage = () => {
             </div>
           </div>
 
-          {/* Patient Details */}
+          {/* Patient Details + Analytics */}
           <div className="lg:col-span-3">
             <div className="space-y-6">
               {/* Patient Preview */}
-              <PatientPreview appointment={selectedPatient} />
+              {selectedPatient && <PatientPreview patient={selectedPatient} />}
               
               {/* Quick Stats */}
               <div className="glass rounded-2xl p-6 fade-in-stagger">
-                <h3 className="medical-heading text-lg text-primary-navy mb-4">Patient Analytics</h3>
+                <h3 className="medical-heading text-lg text-primary-navy mb-4">
+                  Patient Analytics
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="text-center p-4 glass-secondary rounded-xl">
                     <Heart className="h-8 w-8 text-medical-cardiology mx-auto mb-2" />

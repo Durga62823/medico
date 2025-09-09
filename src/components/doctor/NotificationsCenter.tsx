@@ -1,7 +1,31 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AlertTriangle, X, MessageSquare, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { io } from "socket.io-client";
+import { toast } from "sonner";
+
+// Assume this API service exists for fetching and updating notifications
+const notificationAPI = {
+  getNotifications: async () => {
+    const token = localStorage.getItem("token");
+    const res = await fetch("/api/notifications", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch notifications");
+    return res.json(); // Returns array of notifications
+  },
+  dismiss: async (id: string) => {
+    const token = localStorage.getItem("token");
+    const res = await fetch(`/api/notifications/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to dismiss");
+    return res.json();
+  }
+};
 
 interface Notification {
   id: string;
@@ -10,30 +34,6 @@ interface Notification {
   patient: string;
   time: string;
 }
-
-const mockNotifications: Notification[] = [
-  {
-    id: "1",
-    type: "critical",
-    title: "Critical: Elevated Potassium",
-    patient: "Sarah Lin",
-    time: "5 min ago",
-  },
-  {
-    id: "2",
-    type: "message",
-    title: "Patient Message Requires Response",
-    patient: "Michael Chen",
-    time: "12 min ago",
-  },
-  {
-    id: "3",
-    type: "lab",
-    title: "Lab Results Available",
-    patient: "Emma Rodriguez",
-    time: "1 hour ago",
-  },
-];
 
 const notificationIcons = {
   critical: AlertTriangle,
@@ -48,11 +48,48 @@ const notificationColors = {
 };
 
 export const NotificationsCenter = () => {
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const queryClient = useQueryClient();
 
-  const dismissNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const { data: notifications = [], isLoading } = useQuery<Notification[]>({
+    queryKey: ["notifications"],
+    queryFn: notificationAPI.getNotifications,
+  });
+
+  // Real-time updates with Socket.IO
+  useEffect(() => {
+    const socket = io(import.meta.env.VITE_SOCKET_URL || "http://localhost:5000", {
+      auth: { token: localStorage.getItem("token") || "" },
+    });
+
+    socket.on("connect", () => console.log("✅ WebSocket connected for notifications"));
+
+    socket.on("notification:created", (newNotif: Notification) => {
+      queryClient.setQueryData(["notifications"], (old: Notification[] | undefined) =>
+        old ? [newNotif, ...old] : [newNotif]
+      );
+      toast.success("New notification received");
+    });
+
+    socket.on("notification:deleted", (deletedId: string) => {
+      queryClient.setQueryData(["notifications"], (old: Notification[] | undefined) =>
+        old?.filter(n => n.id !== deletedId)
+      );
+    });
+
+    return () => socket.disconnect();
+  }, [queryClient]);
+
+  const dismissNotification = async (id: string) => {
+    try {
+      await notificationAPI.dismiss(id);
+      queryClient.invalidateQueries(["notifications"]);
+      toast.info("Notification dismissed");
+    } catch (error) {
+      toast.error("Failed to dismiss notification");
+    }
   };
+
+  if (isLoading) return <div>Loading notifications...</div>;
 
   return (
     <div className="rounded-xl border bg-card shadow-sm p-6">

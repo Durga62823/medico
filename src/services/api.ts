@@ -78,7 +78,11 @@ export const userAPI = {
 
 
 };
-
+export const alertAPI = {
+  getAlerts: () => api.get('/alerts'),
+  acknowledge: (id: string) => api.patch(`/alerts/${id}/acknowledge`),
+  dismiss: (id: string) => api.delete(`/alerts/${id}`),
+};
 
 export const patientAPI = {
   getAllPatients: (filters: { assigned_doctor?: string; assigned_nurse?: string; status?: string } = {}) =>
