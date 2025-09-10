@@ -1,4 +1,4 @@
-import { Navigation } from "@/components/doctor/Navigation";
+// import { Navigation } from "@/components/doctor/Navigation";
 import { QuickActions } from "@/components/doctor/QuickActions";
 import { 
   FileText, 

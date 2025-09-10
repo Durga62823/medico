@@ -26,7 +26,7 @@ import UserManagement from "./admin/UserManagement";
 import AppointmentsManagement from "./admin/AppointmentsManagement";
 import BillingManagement from "./admin/BillingManagement";
 import NotesSection from "./admin/NotesSection";
-import DoctorDashboard from "./doctor/DoctorDashboard"; // NEW: Import the doctor-specific dashboard
+// import  PatientAllocation  from "./admin/PatientAllocationForm";
 import {
   Heart,
   Activity,
@@ -38,7 +38,9 @@ import {
   LogOut,
   Menu,
   Home,
+  Bed,
 } from "lucide-react";
+import  PatientAllocationForm  from "./admin/PatientAllocationForm";
 
 interface DashboardProps {
   onLogout: () => void;
@@ -53,8 +55,7 @@ interface UserProfile {
   department?: string;
 }
 
-// Fallback data used when APIs fail or are not available.
-// Keeps charts functional during development.
+// Fallback data for vitals
 const fallbackHeartRate = [
   { time: "12:00", value: 100 },
   { time: "12:15", value: 75 },
@@ -63,7 +64,6 @@ const fallbackHeartRate = [
   { time: "1:00", value: 76 },
   { time: "1:15", value: 14 },
 ];
-
 const fallbackBloodPressure = [
   { time: "12:00", value: 118 },
   { time: "12:15", value: 122 },
@@ -72,7 +72,6 @@ const fallbackBloodPressure = [
   { time: "1:00", value: 123 },
   { time: "1:15", value: 119 },
 ];
-
 const fallbackTemperature = [
   { time: "12:00", value: 98.6 },
   { time: "12:15", value: 98.7 },
@@ -81,7 +80,6 @@ const fallbackTemperature = [
   { time: "1:00", value: 98.9 },
   { time: "1:15", value: 98.7 },
 ];
-
 const fallbackOxygen = [
   { time: "12:00", value: 98 },
   { time: "12:15", value: 97 },
@@ -95,7 +93,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
   const queryClient = useQueryClient();
   const alertsRef = useRef<HTMLDivElement | null>(null);
 
-  // Fetch user profile
   const { data: userProfile, isLoading: loading } = useQuery<UserProfile>({
     queryKey: ["profile"],
     queryFn: async () => {
@@ -104,16 +101,13 @@ export function Dashboard({ onLogout }: DashboardProps) {
     },
   });
 
-  // Set default tab: "patients" for doctors, "overview" for others
-  const [activeTab, setActiveTab] = useState<string>(
-    (userProfile?.role || "").toLowerCase() === "doctor" ? "patients" : "overview"
-  );
-
+  // Default to "overview"
+  const [activeTab, setActiveTab] = useState<string>("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
 
   // Fetch patients
   const { data: patientsData } = useQuery({
-    queryKey: ["patients", (userProfile?.role || "").toLowerCase(), userProfile?.id],
+    queryKey: ["patients", userProfile?.id],
     queryFn: async () => {
       if (!userProfile) return [];
       const role = (userProfile.role || "").toLowerCase();
@@ -126,10 +120,8 @@ export function Dashboard({ onLogout }: DashboardProps) {
     enabled: !!userProfile,
   });
 
-  // Selected patient id (simple localStorage approach; you can replace with context/state)
   const selectedId = typeof window !== "undefined" ? localStorage.getItem("selected_patient_id") || "" : "";
 
-  // Fetch vitals trends for selected patient
   const { data: vitalsData } = useQuery({
     queryKey: ["vitals", selectedId],
     queryFn: async () => {
@@ -140,7 +132,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
     enabled: !!selectedId && !!userProfile,
   });
 
-  // Dashboard stats
   const [stats, setStats] = useState({
     activePatients: 0,
     criticalAlerts: 0,
@@ -158,7 +149,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
     setStats((prev) => ({ ...prev, systemOnline: typeof navigator !== "undefined" ? navigator.onLine : true }));
   }, [patientsData]);
 
-  // Real-time alerts via Socket.io
   useEffect(() => {
     if (!userProfile) return;
     const socket = io(import.meta.env.VITE_SOCKET_URL || "http://localhost:5000", {
@@ -168,9 +158,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
     socket.on("disconnect", (reason) => console.log("WebSocket disconnected:", reason));
     socket.on("vital_alert", (data: any) => {
       console.log("Alert received:", data);
-      // Revalidate alerts or add to local state
       queryClient.invalidateQueries({ queryKey: ["alerts"] });
-      // Optionally increment criticalAlerts
       setStats((prev) => ({ ...prev, criticalAlerts: (prev.criticalAlerts || 0) + 1 }));
     });
     return () => {
@@ -178,7 +166,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
     };
   }, [userProfile, queryClient]);
 
-  // Vitals: use backend or fallback values
   const vitals = {
     heartRate: vitalsData?.avgHeartRate || fallbackHeartRate,
     bloodPressure: vitalsData?.avgBloodPressure || fallbackBloodPressure,
@@ -187,7 +174,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
   };
 
   useEffect(() => {
-    // Scroll to top on mount
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "auto" });
     }
@@ -235,15 +221,8 @@ export function Dashboard({ onLogout }: DashboardProps) {
     );
   }
 
-  // NEW: Conditional rendering for Doctor role - Use DoctorDashboard
-  // if ((userProfile.role || "").toLowerCase() === "doctor") {
-  //   return <DoctorDashboard />;
-  // }
-
-  // Original dashboard for other roles
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="container flex h-16 items-center justify-between px-6">
           <div className="flex items-center space-x-4">
@@ -289,43 +268,37 @@ export function Dashboard({ onLogout }: DashboardProps) {
         </div>
       </header>
 
-      <div className="container mx-auto p-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:grid-cols-5">
-            <TabsTrigger value="overview" className="flex items-center space-x-2">
-              <Home className="w-4 h-4" />
-              <span className="hidden sm:inline">Overview</span>
-            </TabsTrigger>
-          
-            <TabsTrigger value="patients" className="flex items-center space-x-2">
-              <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">Patients</span>
-            </TabsTrigger>
-            {/* Admin: Users */}
-            {(userProfile.role || "").toLowerCase() === "admin" && (
-              <TabsTrigger value="users" className="flex items-center space-x-2">
-                <Users className="w-4 h-4" />
-                <span className="hidden sm:inline">Users</span>
-              </TabsTrigger>
-            )}
-            {/* Admin or Doctor: Appointments */}
-            {["admin"].includes((userProfile.role || "").toLowerCase()) && (
-              <TabsTrigger value="appointments" className="flex items-center space-x-2">
-                <Activity className="w-4 h-4" />
-                <span className="hidden sm:inline">Appointments</span>
-              </TabsTrigger>
-            )}
-            {/* Admin: Billing */}
-            {(userProfile.role || "").toLowerCase() === "admin" && (
-              <TabsTrigger value="billing" className="flex items-center space-x-2">
-                <BarChart3 className="w-4 h-4" />
-                <span className="hidden sm:inline">Billing</span>
-              </TabsTrigger>
-            )}
-          </TabsList>
-          {/* Overview Tab */}
+      <div className="container mx-auto  p-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 ">
+<TabsList className="flex flex-nowrap overflow-x-auto space-x-2 w-full px-2">
+  <TabsTrigger value="overview" className="flex items-center space-x-2 whitespace-nowrap">
+    <Home className="w-4 h-4" />
+    <span className="hidden sm:inline">Overview</span>
+  </TabsTrigger>
+  <TabsTrigger value="patients" className="flex items-center space-x-2 whitespace-nowrap">
+    <Users className="w-4 h-4" />
+    <span className="hidden sm:inline">Patients</span>
+  </TabsTrigger>
+  <TabsTrigger value="users" className="flex items-center space-x-2 whitespace-nowrap">
+    <Users className="w-4 h-4" />
+    <span className="hidden sm:inline">Users</span>
+  </TabsTrigger>
+  <TabsTrigger value="appointments" className="flex items-center space-x-2 whitespace-nowrap">
+    <Activity className="w-4 h-4" />
+    <span className="hidden sm:inline">Appointments</span>
+  </TabsTrigger>
+  <TabsTrigger value="billing" className="flex items-center space-x-2 whitespace-nowrap">
+    <BarChart3 className="w-4 h-4" />
+    <span className="hidden sm:inline">Billing</span>
+  </TabsTrigger>
+  <TabsTrigger value="room" className="flex items-center space-x-2 whitespace-nowrap">
+    <Bed className="h-5 w-5" />
+    <span className="hidden sm:inline">Room Allocation</span>
+  </TabsTrigger>
+</TabsList>
+
+
           <TabsContent value="overview" className="space-y-6">
-            {/* Quick Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -421,30 +394,25 @@ export function Dashboard({ onLogout }: DashboardProps) {
               </div>
             </div>
           </TabsContent>
-          {/* Vitals Tab */}
 
-          {/* Patients Tab */}
           <TabsContent value="patients" className="space-y-6">
             <PatientManagement userRole={(userProfile.role || "").toLowerCase()} userId={userProfile.id} />
           </TabsContent>
-          {/* Users Tab (Admin only) */}
-          {(userProfile.role || "").toLowerCase() === "admin" && (
-            <TabsContent value="users" className="space-y-6">
-              <UserManagement userRole={(userProfile.role || "").toLowerCase()} />
-            </TabsContent>
-          )}
-          {/* Admin or Doctor: Appointments */}
-          {["admin"].includes((userProfile.role || "").toLowerCase()) && (
-            <TabsContent value="appointments" className="space-y-6">
-              <AppointmentsManagement userRole={(userProfile.role || "").toLowerCase()} userId={userProfile.id} />
-            </TabsContent>
-          )}
-          {/* Admin: Billing */}
-          {(userProfile.role || "").toLowerCase() === "admin" && (
-            <TabsContent value="billing" className="space-y-6">
-              <BillingManagement />
-            </TabsContent>
-          )}
+
+          <TabsContent value="users" className="space-y-6">
+            <UserManagement userRole={(userProfile.role || "").toLowerCase()} />
+          </TabsContent>
+
+          <TabsContent value="appointments" className="space-y-6">
+            <AppointmentsManagement userRole={(userProfile.role || "").toLowerCase()} userId={userProfile.id} />
+          </TabsContent>
+
+          <TabsContent value="billing" className="space-y-6">
+            <BillingManagement />
+          </TabsContent>
+           <TabsContent value="room" className="space-y-6">
+            <PatientAllocationForm />
+          </TabsContent>
         </Tabs>
       </div>
     </div>

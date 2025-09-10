@@ -1,5 +1,7 @@
+import type { PatientAllocation } from '@/components/admin/PatientAllocationForm';
 import axios from 'axios';
 import type { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import type { get } from 'react-hook-form';
 
 // In dev, Vite proxy will forward /api to backend at 
 // In prod, set VITE_API_URL in environment to override
@@ -16,20 +18,20 @@ const api: AxiosInstance = axios.create({
   withCredentials: true,  // Remove if your backend doesn't use cookies for auth
 });
 
-// Request interceptor: Add token to headers for authenticated requests
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
     config.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
-  config.headers['Pragma'] = 'no-cache';
-  config.headers['Expires'] = '0';
+    config.headers['Pragma'] = 'no-cache';
+    config.headers['Expires'] = '0';
     const token = localStorage.getItem('token');
     if (token && config.headers) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
-    return config;
+    return config;  // <-- Return the config here
   },
   (error) => Promise.reject(error)
 );
+
 
 // Response interceptor: Handle unauthorized (401) errors by clearing token and redirecting
 api.interceptors.response.use(
@@ -67,7 +69,6 @@ export const authAPI = {
   login: (data: LoginPayload) => api.post<AuthResponse>('/auth/login', data),
 };
 
-
 export const userAPI = {
   profile: () => api.get<any>('/users/profile'),
   getAllUsers: () => api.get<any[]>('/users'),
@@ -78,6 +79,7 @@ export const userAPI = {
 
 
 };
+
 export const alertAPI = {
   getAlerts: () => api.get('/alerts'),
   acknowledge: (id: string) => api.patch(`/alerts/${id}/acknowledge`),
@@ -92,13 +94,32 @@ export const patientAPI = {
   updatePatient: (id: string, data: any) => api.put(`/patients/${id}`, data),
   deletePatient: (id: string) => api.delete(`/patients/${id}`),
 };
-
 // Vital signs endpoints 
 export const vitalAPI = {
   getVitals: (patientId: string) => api.get<any[]>(`/patients/${patientId}/vitals`),
   recordVitals: (patientId: string, data: any) => api.post(`/patients/${patientId}/vitals`, data),
   getTrends: (patientId: string) => api.get<any>(`/patients/${patientId}/vitals/trends`),
 };
+
+export const allocationApi = {
+  get: (id?: string) => {
+    const url = id ? `/patient-allocation/${id}` : `/patient-allocation`;
+    return api.get(url).then(res => res.data);
+  },
+  getPatients: () => {
+    return api.get('/patients').then(res => res.data);
+  },
+  put: (id: string, data: PatientAllocation) => {
+    return api.put(`/patient-allocations/${id}`, data).then(res => res.data);
+  },
+  delete: (id: string) => {
+    return api.delete(`/patient-allocations/${id}`).then(res => res.data);
+  },
+  post: (data: PatientAllocation) => {
+    return api.post('/patient-allocations', data).then(res => res.data);
+  }
+};
+
 
 // Medical notes endpoints
 export const noteAPI = {

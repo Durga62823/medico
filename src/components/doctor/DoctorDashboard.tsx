@@ -284,7 +284,7 @@ const DoctorDashboard = () => {
         </motion.div>
       </motion.main>
       
-      {/* ... Rest of the component (footer) remains the same */}
+    
       <motion.footer
         className="bg-muted mt-16"
         initial="hidden"

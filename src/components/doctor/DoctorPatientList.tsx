@@ -82,6 +82,7 @@ const DoctorPatientList = () => {
     queryFn: async () => {
       if (!doctorId) return [];
       const res = await patientAPI.getAllPatients({ assigned_doctor: doctorId });
+      console.log(res)
       return Array.isArray(res.data) ? res.data : [];
     },
     enabled: !!doctorId,
@@ -149,104 +150,126 @@ const DoctorPatientList = () => {
   };
 
   const scheduleVisit = (name: string) => toast.info(`Next visit scheduled for ${name} at 2:00 PM.`);
+function calculateAge(dobString: string) {
+  const dob = new Date(dobString);
+  const today = new Date();
 
-  if (isLoadingPatients)
-    return <div className="text-center p-6 text-gray-500">Loading patients...</div>;
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  const dayDiff = today.getDate() - dob.getDate();
 
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+    age--;
+  }
+
+  return age;
+}
+  if (isLoadingPatients) {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">Current Patients</h3>
-        <Badge variant="secondary" className="text-sm">{patients.length} Active</Badge>
+    <div className="flex justify-center items-center p-6">
+      <div className="flex flex-col items-center">
+        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <p className="mt-3 text-gray-500">Loading patients...</p>
       </div>
+    </div>
+  );
+}
 
-      {patients.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <UserCheck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No patients assigned</h3>
-            <p className="text-gray-500">You currently have no active patients to manage.</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4">
-          {patients.map((patient, index) => {
-            const v = vitalsMap[patient._id];
-            const bp = v ? `${v.blood_pressure_systolic}/${v.blood_pressure_diastolic}` : "-";
-            return (
-              <motion.div
-                key={patient._id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <Card className="hover:shadow-lg transition-all">
-                  <CardContent className="p-6 flex flex-col md:flex-row justify-between gap-4">
-                    <div className="flex gap-4 flex-1">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={patient.avatar} />
-                        <AvatarFallback>{patient.full_name.split(" ").map((n) => n[0]).join("")}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-3">
-                          <h4 className="font-semibold">{patient.full_name}</h4>
-                          {getStatusBadge(patient.status)}
+return (
+  <div className="space-y-6">
+    <div className="flex items-center justify-between">
+      <h3 className="text-lg font-semibold text-gray-900">Current Patients</h3>
+      <Badge variant="secondary" className="text-sm">{patients.length} Active</Badge>
+    </div>
+
+    {patients.length === 0 ? (
+      <Card>
+        <CardContent className="p-8 text-center">
+          <UserCheck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No patients assigned</h3>
+          <p className="text-gray-500">You currently have no active patients to manage.</p>
+        </CardContent>
+      </Card>
+    ) : (
+      <div className="grid gap-4">
+        {patients.map((patient, index) => {
+          const v = vitalsMap[patient._id];
+          const bp = v ? `${v.blood_pressure_systolic}/${v.blood_pressure_diastolic}` : "-";
+          return (
+            <motion.div
+              key={patient._id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <Card className="hover:shadow-lg transition-all">
+                <CardContent className="p-6 flex flex-col md:flex-row justify-between gap-4">
+                  <div className="flex gap-4 flex-1">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={patient.avatar} />
+                      <AvatarFallback>{patient.full_name.split(" ").map((n) => n[0]).join("")}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-3">
+                        <h4 className="font-semibold">{patient.full_name}</h4>
+                        {getStatusBadge(patient.status)}
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                        <div>
+                          <p><span className="font-medium">Age:</span> {calculateAge(patient.date_of_birth)}</p>
+                          <p><span className="font-medium">Gender:</span> {patient.gender}</p>
+                          <p><span className="font-medium">Room:</span> {patient.room}</p>
+                          <p><span className="font-medium">Condition:</span> {patient.condition}</p>
                         </div>
-                        <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
-                          <div>
-                            <p><span className="font-medium">Age:</span> {patient.age} • {patient.gender}</p>
-                            <p><span className="font-medium">Room:</span> {patient.room}</p>
-                            <p><span className="font-medium">Condition:</span> {patient.condition}</p>
-                          </div>
-                          <div>
-                            <p className="flex items-center gap-1"><Heart className="h-4 w-4 text-red-500" /> {v?.heart_rate ?? "-"} BPM</p>
-                            <p className="flex items-center gap-1"><Activity className="h-4 w-4 text-blue-500" /> {bp}</p>
-                            <p className="flex items-center gap-1"><Thermometer className="h-4 w-4 text-orange-500" /> {v?.temperature ?? "-"}°C</p>
-                            <p className="flex items-center gap-1"><Activity className="h-4 w-4 text-green-500" /> {v?.oxygen_saturation ?? "-"}%</p>
-                          </div>
+                        <div>
+                          <p className="flex items-center gap-1"><Heart className="h-4 w-4 text-red-500" /> {v?.heart_rate ?? "-"} BPM</p>
+                          <p className="flex items-center gap-1"><Activity className="h-4 w-4 text-blue-500" /> {bp}</p>
+                          <p className="flex items-center gap-1"><Thermometer className="h-4 w-4 text-orange-500" /> {v?.temperature ?? "-"}°C</p>
+                          <p className="flex items-center gap-1"><Activity className="h-4 w-4 text-green-500" /> {v?.oxygen_saturation ?? "-"}%</p>
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-col gap-2">
-                      <Button variant="outline" size="sm" onClick={() => scheduleVisit(patient.full_name)}>
-                        <Calendar className="h-4 w-4 mr-2" /> Schedule Visit
-                      </Button>
-                      {patient.status !== "Discharged" && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="border-green-500 text-green-600">
-                              <CheckCircle className="h-4 w-4 mr-2" /> Discharge
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Discharge Patient</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to discharge {patient.full_name}?
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => dischargeMutation.mutate({ patientId: patient._id })}
-                                disabled={dischargeMutation.isPending}
-                              >
-                                {dischargeMutation.isPending ? "Discharging..." : "Confirm Discharge"}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Button variant="outline" size="sm" onClick={() => scheduleVisit(patient.full_name)}>
+                      <Calendar className="h-4 w-4 mr-2" /> Schedule Visit
+                    </Button>
+                    {patient.status !== "Discharged" && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="border-green-500 text-green-600">
+                            <CheckCircle className="h-4 w-4 mr-2" /> Discharge
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Discharge Patient</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to discharge {patient.full_name}?
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => dischargeMutation.mutate({ patientId: patient._id })}
+                              disabled={dischargeMutation.isPending}
+                            >
+                              {dischargeMutation.isPending ? "Discharging..." : "Confirm Discharge"}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          );
+        })}
+      </div>
+    )}
+  </div>
+);
 };
 
 export default DoctorPatientList;

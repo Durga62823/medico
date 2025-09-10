@@ -135,70 +135,73 @@ console.log("Doctor ID:", doctorId);
       </div>
 
       <div className="space-y-4">
-        {isLoading && <p className="text-center text-muted-foreground">Loading appointments...</p>}
+{isLoading ? (
+  <div className="flex justify-center items-center py-6">
+    <div className="flex flex-col items-center">
+      <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      <p className="mt-2 text-gray-500">Loading appointments...</p>
+    </div>
+  </div>
+) : todayAppointments.length > 0 ? (
+  todayAppointments
+    .filter((apt) => apt.appointment_time) // remove missing time
+    .sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
+    .map((apt) => (
+      <motion.div
+        key={apt._id}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Card className="shadow-sm hover:shadow-md transition-all">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-4 flex-1">
+              <div className="text-lg font-bold text-primary">
+                {formatTime(apt.appointment_time)}
+              </div>
+              <Avatar className="h-10 w-10">
+                <AvatarFallback>
+                  {apt.patient_id?.full_name
+                    ?.split(" ")
+                    .map((n) => n[0])
+                    .join("")}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-semibold">{apt.patient_id?.full_name}</span>
+                  <Badge>{capitalize(apt.status)}</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {apt.notes || "No notes available"}
+                </p>
+              </div>
+            </div>
+            <Checkbox
+              checked={apt.status === "completed"}
+              onCheckedChange={(checked) =>
+                updateAppointmentMutation.mutate({
+                  id: apt._id,
+                  newStatus: checked ? "completed" : "scheduled",
+                })
+              }
+              disabled={updateAppointmentMutation.isPending}
+            />
+          </CardContent>
+        </Card>
+      </motion.div>
+    ))
+) : (
+  <Card>
+    <CardContent className="p-6 text-center">
+      <Calendar className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+      <h4 className="text-lg font-semibold">No appointments today</h4>
+      <p className="text-muted-foreground">You're all caught up for now.</p>
+    </CardContent>
+  </Card>
+)}
 
-        {todayAppointments.length > 0 ? (
-          todayAppointments
-            .filter((apt: any) => apt.appointment_time) // remove missing time
-            .sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
-            .map((apt: any) => (
-              <motion.div
-                key={apt._id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Card className="shadow-sm hover:shadow-md transition-all">
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="text-lg font-bold text-primary">
-                        {formatTime(apt.appointment_time)}
-                      </div>
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback>
-                          {apt.patient_id?.full_name
-                            ?.split(" ")
-                            .map((n: string) => n[0])
-                            .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold">{apt.patient_id?.full_name}</span>
-                          <Badge>{capitalize(apt.status)}</Badge>
-
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {apt.notes || "No notes available"}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* ✅ Checkbox instead of Complete button */}
-                    <Checkbox
-                      checked={apt.status === "completed"}
-                      onCheckedChange={(checked) =>
-                        updateAppointmentMutation.mutate({
-                          id: apt._id,
-                          newStatus: checked ? "completed" : "scheduled",
-                        })
-                      }
-                      disabled={updateAppointmentMutation.isPending}
-                    />
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))
-        ) : (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <Calendar className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
-              <h4 className="text-lg font-semibold">No appointments today</h4>
-              <p className="text-muted-foreground">You're all caught up for now.</p>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );

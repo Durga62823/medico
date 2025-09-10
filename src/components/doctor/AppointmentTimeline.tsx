@@ -119,7 +119,7 @@ export const AppointmentTimeline = ({ onAppointmentClick }: AppointmentTimelineP
       return aTime - bTime;
     })[0];
   }, [appointments, today]);
-console.log("Current Appointment:", currentAppointment);
+// console.log("Current Appointment:", currentAppointment);
   if (isLoading) return <div className="p-6 text-center">Loading...</div>;
   const formatTime = (time: string) => {
     if (!time) return "";
@@ -129,46 +129,52 @@ console.log("Current Appointment:", currentAppointment);
     const displayHour = hourNum % 12 || 12;
     return `${displayHour}:${minute} ${ampm}`;
   };
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   return (
-    <div className="glass p-6 rounded-xl">
-      <h2 className="text-xl font-semibold flex items-center gap-2 mb-4">
-        <Clock className="h-5 w-5" /> Current Appointment
-      </h2>
-{currentAppointment ? (
-  <div
-    className="p-4 border rounded-lg cursor-pointer hover:shadow-md transition-shadow"
-    onClick={() => onAppointmentClick?.(currentAppointment)}
-  >
-    <div className="flex items-center justify-between mb-2">
-      <span className="font-semibold text-black">{formatTime(currentAppointment.appointment_time)}</span>
-      <span className="text-xl text-white rounded-full  font-medium bg-black">{currentAppointment.status}</span>
-    </div>
-    <div className="flex items-center gap-2 mb-3">
-      <User className="w-5 h-5 text-black" />
-      <span className="text-lg font-bold text-black">{currentAppointment.patient_id.full_name}</span>
-    </div>
-    <div className="mb-2 text-sm ">
-      Appointment Type:
-      <span className="font-medium text-red-600">
-      {currentAppointment.appointment_type || 'General Consultation'}
-      </span>
-    </div>
-    <div className="mb-3 text-sm text-black">
-      {currentAppointment.notes || 'No notes available.'}
-    </div>
-    <div className="text-lg font-semibold text-black">
-      Duration: {currentAppointment.duration_minutes} mins
-    </div>
-  </div>
-) : (
-  <div className="p-4 border rounded-lg text-center text-black">
-    <p className="text-base font-medium">No upcoming appointments for today.</p>
-    <p className="text-sm">You are all caught up!</p>
-  </div>
-)}
+<div className="glass p-6 rounded-xl">
+  <h2 className="text-xl font-semibold flex items-center gap-2 mb-4">
+    <Clock className="h-5 w-5" /> Current Appointment
+  </h2>
 
-
-
+  {isLoading ? (
+    <div className="p-6 border rounded-lg bg-white/50 backdrop-blur-sm flex flex-col items-center justify-center space-y-4">
+      <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      <p className="text-gray-600 text-sm">Fetching appointment details...</p>
     </div>
+  ) : currentAppointment ? (
+    <div
+      className="p-4 border rounded-lg cursor-pointer hover:shadow-md transition-shadow bg-white"
+      onClick={() => onAppointmentClick?.(currentAppointment)}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-semibold text-black">{formatTime(currentAppointment.appointment_time)}</span>
+        <span className="text-sm text-white rounded-full font-semibold bg-black px-3 py-1">
+          {capitalize(currentAppointment.status)}
+        </span>
+      </div>
+      <div className="flex items-center gap-2 mb-3">
+        <User className="w-5 h-5 text-black" />
+        <span className="text-lg font-bold text-black">{currentAppointment.patient_id.full_name}</span>
+      </div>
+      <div className="mb-2 text-sm text-black">
+        Appointment Type:{" "}
+        <span className="font-medium text-red-600">
+          {currentAppointment.appointment_type || "General Consultation"}
+        </span>
+      </div>
+      <div className="mb-3 text-sm text-black">
+        {currentAppointment.notes || "No notes available."}
+      </div>
+      <div className="text-lg font-semibold text-black">
+        Duration: {currentAppointment.duration_minutes} mins
+      </div>
+    </div>
+  ) : (
+    <div className="p-4 border rounded-lg text-center bg-white/50 backdrop-blur-sm">
+      <p className="text-base font-medium text-gray-600">No upcoming appointments for today.</p>
+      <p className="text-sm text-gray-500">You are all caught up!</p>
+    </div>
+  )}
+</div>
   );
 };

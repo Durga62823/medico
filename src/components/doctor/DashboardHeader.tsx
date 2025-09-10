@@ -126,8 +126,8 @@ const today = new Date().toISOString().split("T")[0];
         <p className="text-sm text-muted-foreground">Total Appointments</p>
         <p className="text-2xl font-bold text-foreground">{totalAppointments}</p>
       </div>
-      <div className="rounded-full bg-secondary/10 p-3">
-        <ClipboardList className="h-6 w-6 text-secondary" />
+      <div className="rounded-full bg-primary/10 p-3">
+        <ClipboardList className="h-6 w-6 text-primary " />
       </div>
     </div>
   </CardContent>
@@ -142,8 +142,8 @@ const today = new Date().toISOString().split("T")[0];
               <p className="text-sm text-muted-foreground">Critical Patients</p>
               <p className="text-2xl font-bold text-warning">{stats?.criticalPatients || 0}</p>
             </div>
-            <div className="rounded-full bg-warning/10 p-3">
-              <AlertCircle className="h-6 w-6 text-warning" />
+            <div className="rounded-full bg-primary/10 p-3">
+              <AlertCircle className="h-6 w-6 text-primary" />
             </div>
           </div>
         </CardContent>
@@ -157,8 +157,8 @@ const today = new Date().toISOString().split("T")[0];
               <p className="text-sm text-muted-foreground">Discharged Today</p>
               <p className="text-2xl font-bold text-success">{stats?.dischargedToday || 0}</p>
             </div>
-            <div className="rounded-full bg-success/10 p-3">
-              <CheckCircle className="h-6 w-6 text-success" />
+            <div className="rounded-full bg-primary/10 p-3">
+              <CheckCircle className="h-6 w-6 text-primary" />
             </div>
           </div>
         </CardContent>
