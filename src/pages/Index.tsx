@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Dashboard } from "@/components/Dashboard";
+import  Dashboard  from "@/components/Dashboard";
 import DoctorDashboard from "@/components/doctor/DoctorDashboard";
 import { userAPI } from "@/services/api";
 // import { PatientPreview } from "@/components/doctor/PatientPreview";

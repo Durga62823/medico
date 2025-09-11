@@ -94,6 +94,7 @@ export const patientAPI = {
   updatePatient: (id: string, data: any) => api.put(`/patients/${id}`, data),
   deletePatient: (id: string) => api.delete(`/patients/${id}`),
 };
+
 // Vital signs endpoints 
 export const vitalAPI = {
   getVitals: (patientId: string) => api.get<any[]>(`/patients/${patientId}/vitals`),
@@ -102,22 +103,38 @@ export const vitalAPI = {
 };
 
 export const allocationApi = {
-  get: (id?: string) => {
-    const url = id ? `/patient-allocation/${id}` : `/patient-allocation`;
-    return api.get(url).then(res => res.data);
-  },
-  getPatients: () => {
-    return api.get('/patients').then(res => res.data);
-  },
-  put: (id: string, data: PatientAllocation) => {
-    return api.put(`/patient-allocations/${id}`, data).then(res => res.data);
-  },
-  delete: (id: string) => {
-    return api.delete(`/patient-allocations/${id}`).then(res => res.data);
-  },
-  post: (data: PatientAllocation) => {
-    return api.post('/patient-allocations', data).then(res => res.data);
+get: async (id?: string) => {
+  const url = id ? `/patient-allocations/${id}` : `/patient-allocations`;
+  const res = await api.get(url);
+
+  if (Array.isArray(res.data)) {
+    return res.data.map(a => ({ ...a, id: a._id }));
+  } else {
+    return { ...res.data, id: res.data._id };
   }
+},
+
+  getPatients: async () => {
+    const res = await api.get('/patients');
+    return res.data;
+  },
+  put: async (id: string, data: PatientAllocation) => {
+    const res = await api.put(`/patient-allocations/${id}`, data);
+    return res.data;
+  },
+  delete: async (id: string) => {
+    const res = await api.delete(`/patient-allocations/${id}`);
+    return res.data;
+  },
+  post: async (data: PatientAllocation) => {
+    const res = await api.post('/patient-allocations', data);
+    return res.data;
+  }
+  ,
+  discharge: async (id: string) => {
+    const res = await api.post(`/patient-allocations/${id}/discharge`);
+    return res.data;
+  },
 };
 
 
