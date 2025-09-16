@@ -3,6 +3,7 @@ import { io } from "socket.io-client";
 import { allocationApi } from "../../services/api";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Result } from "postcss";
 type Vitals = {
   bp: string;
   hr: number;
@@ -21,7 +22,7 @@ export type PatientAllocation = {
   status: "stable" | "critical" | "monitoring" | "improving";
   day: number;
   primaryDiagnosis: string;
-  vitals: Vitals;
+
   alerts: Alert[];
 };
 
@@ -166,12 +167,15 @@ useEffect(() => {
     setLoading(true);
     try {
       let result: PatientAllocation;
+      
     //   if (form.id) result = await allocationApi.put(form.id, form);
      result = await allocationApi.post(form);
+     console.error(result);
       toast.success("Allocation saved");
       setForm(result);
       if (!allocations.some((a) => a.id === result.id)) setAllocations((old) => [...old, result]);
     } catch (err: any) {
+
       toast.error("Failed to save allocation");
     } finally {
       setLoading(false);

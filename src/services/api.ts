@@ -1,7 +1,6 @@
 import type { PatientAllocation } from '@/components/admin/PatientAllocationForm';
 import axios from 'axios';
 import type { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
-import type { get } from 'react-hook-form';
 
 // In dev, Vite proxy will forward /api to backend at 
 // In prod, set VITE_API_URL in environment to override
@@ -106,7 +105,7 @@ export const allocationApi = {
 get: async (id?: string) => {
   const url = id ? `/patient-allocations/${id}` : `/patient-allocations`;
   const res = await api.get(url);
-
+  // console.log(res)
   if (Array.isArray(res.data)) {
     return res.data.map(a => ({ ...a, id: a._id }));
   } else {
