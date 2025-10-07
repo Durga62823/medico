@@ -49,8 +49,8 @@ interface Staff {
 interface Vital {
   _id: string;
   heart_rate?: number;
-  blood_pressure_systolic?: number;
-  blood_pressure_diastolic?: number;
+  blood_pressure?: number;
+  oxygen_saturation?: number;
   temperature?: number;
   recorded_at: string;
 }
@@ -102,7 +102,7 @@ export default function PatientManagement({ userRole, userId }: PatientManagemen
     status: "active",
   });
 
-  const [newVital, setNewVital] = useState({ heart_rate: '', blood_pressure_systolic: '', blood_pressure_diastolic: '', temperature: '' });
+  const [newVital, setNewVital] = useState({ heart_rate: '', blood_pressure: '', oxygen_saturation: '', temperature: '' });
   const [newNote, setNewNote] = useState({ note_type: '', content: '' });
 
   // This hook fetches patients based on the user's role and ID.
@@ -370,11 +370,12 @@ export default function PatientManagement({ userRole, userId }: PatientManagemen
   const handleRecordVital = (patientId: string) => {
     const vitalData = {
       heart_rate: parseFloat(newVital.heart_rate) || undefined,
-      blood_pressure_systolic: parseFloat(newVital.blood_pressure_systolic) || undefined,
-      blood_pressure_diastolic: parseFloat(newVital.blood_pressure_diastolic) || undefined,
+      blood_pressure: parseFloat(newVital.blood_pressure) || undefined,
+      oxygen_saturation: parseFloat(newVital.oxygen_saturation) || undefined,
       temperature: parseFloat(newVital.temperature) || undefined,
     };
     recordVitalMutation.mutate({ patientId, vitalData });
+    console.log(vitalData)
   };
 
   const handleAddNote = (patientId: string) => {
@@ -430,442 +431,619 @@ export default function PatientManagement({ userRole, userId }: PatientManagemen
         )}
       </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingPatient ? "Edit Patient" : "Add New Patient"}</DialogTitle>
-            <DialogDescription>
-              {editingPatient ? "Update patient information" : "Enter comprehensive patient details"}
-            </DialogDescription>
-          </DialogHeader>
+<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+  <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>
+        {editingPatient ? "Edit Patient" : "Add New Patient"}
+      </DialogTitle>
+      <DialogDescription>
+        {editingPatient
+          ? "Update patient information"
+          : "Enter comprehensive patient details"}
+      </DialogDescription>
+    </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-6 p-2">
-            <Tabs defaultValue="basic" className="w-full">
-              <TabsList>
-                <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                <TabsTrigger value="medical">Medical Details</TabsTrigger>
-                <TabsTrigger value="contact">Contact & Emergency</TabsTrigger>
-                <TabsTrigger value="assignment">Assignment</TabsTrigger>
-              </TabsList>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <Tabs defaultValue="basic" className="space-y-4">
+        <TabsList className="flex flex-wrap gap-2">
+          <TabsTrigger value="basic">Basic Info</TabsTrigger>
+          <TabsTrigger value="medical">Medical Details</TabsTrigger>
+          <TabsTrigger value="contact">Contact & Emergency</TabsTrigger>
+          <TabsTrigger value="assignment">Assignment</TabsTrigger>
+        </TabsList>
 
-              <TabsContent value="basic" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="patient_id">Patient ID</Label>
-                    <Input
-                      id="patient_id"
-                      value={formData.patient_id}
-                      onChange={(e) => setFormData({ ...formData, patient_id: e.target.value })}
-                      placeholder="P-2024-001"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="full_name">Full Name</Label>
-                    <Input
-                      id="full_name"
-                      value={formData.full_name}
-                      onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="date_of_birth">Date of Birth</Label>
-                    <Input
-                      id="date_of_birth"
-                      type="date"
-                      value={formData.date_of_birth}
-                      onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="gender">Gender</Label>
-                    <Select value={formData.gender} onValueChange={(value) => setFormData({ ...formData, gender: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Male">Male</SelectItem>
-                        <SelectItem value="Female">Female</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="blood_type">Blood Type</Label>
-                    <Select value={formData.blood_type} onValueChange={(value) => setFormData({ ...formData, blood_type: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select blood type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="A+">A+</SelectItem>
-                        <SelectItem value="A-">A-</SelectItem>
-                        <SelectItem value="B+">B+</SelectItem>
-                        <SelectItem value="B-">B-</SelectItem>
-                        <SelectItem value="AB+">AB+</SelectItem>
-                        <SelectItem value="AB-">AB-</SelectItem>
-                        <SelectItem value="O+">O+</SelectItem>
-                        <SelectItem value="O-">O-</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="status">Status</Label>
-                    <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Discharged">Discharged</SelectItem>
-                        <SelectItem value="Transferred">Transferred</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="medical" className="space-y-4">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="medical_history">Medical History</Label>
-                    <Textarea
-                      id="medical_history"
-                      value={formData.medical_history}
-                      onChange={(e) => setFormData({ ...formData, medical_history: e.target.value })}
-                      placeholder="Previous conditions, surgeries, etc."
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="allergies">Allergies (comma-separated)</Label>
-                    <Input
-                      id="allergies"
-                      value={formData.allergies}
-                      onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
-                      placeholder="Penicillin, Nuts, Latex"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="current_medications">Current Medications (comma-separated)</Label>
-                    <Input
-                      id="current_medications"
-                      value={formData.current_medications}
-                      onChange={(e) => setFormData({ ...formData, current_medications: e.target.value })}
-                      placeholder="Aspirin, Metformin, Lisinopril"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="admission_date">Admission Date</Label>
-                    <Input
-                      id="admission_date"
-                      type="date"
-                      value={formData.admission_date}
-                      onChange={(e) => setFormData({ ...formData, admission_date: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="contact" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input
-                      id="phone"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="+1 (555) 123-4567"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="patient@email.com"
-                    />
-                  </div>
-
-                  <div className="col-span-2 space-y-2">
-                    <Label htmlFor="address">Address</Label>
-                    <Textarea
-                      id="address"
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      placeholder="123 Main St, City, State, ZIP"
-                      rows={2}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="emergency_contact_name">Emergency Contact Name</Label>
-                    <Input
-                      id="emergency_contact_name"
-                      value={formData.emergency_contact_name}
-                      onChange={(e) => setFormData({ ...formData, emergency_contact_name: e.target.value })}
-                      placeholder="Jane Doe"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="emergency_contact_phone">Emergency Contact Phone</Label>
-                    <Input
-                      id="emergency_contact_phone"
-                      value={formData.emergency_contact_phone}
-                      onChange={(e) => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
-                      placeholder="+1 (555) 987-6543"
-                    />
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="assignment" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="assigned_doctor">Assigned Doctor</Label>
-                    <Select
-                      value={formData.assigned_doctor || "unassigned"}
-                      onValueChange={(value) => setFormData({ ...formData, assigned_doctor: value === "unassigned" ? "" : value })}
-                      disabled={staffLoading || doctors.length === 0}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={staffLoading ? "Loading..." : doctors.length === 0 ? "No doctors available" : "Select doctor"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                        {doctors.map((d) => (
-                          <SelectItem key={d.id || d._id} value={d.id || d._id!}>
-                            {d.full_name} ({d.department || 'N/A'})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="assigned_nurse">Assigned Nurse</Label>
-                    <Select
-                      value={formData.assigned_nurse || "unassigned"}
-                      onValueChange={(value) =>
-                        setFormData({
-                          ...formData,
-                          assigned_nurse: value === "unassigned" ? "" : value
-                        })
-                      }
-                      disabled={staffLoading || nurses.length === 0}
-                    >
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            staffLoading
-                              ? "Loading nurses..."
-                              : nurses.length === 0
-                                ? "No nurses available"
-                                : "Select nurse"
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                        {nurses.map((n) => (
-                          <SelectItem key={n.id || n._id} value={n.id || n._id!}>
-                            {n.full_name} ({n.department || "General"})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-            <div className="flex justify-end space-x-2 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={savePatientMutation.isPending}>
-                {savePatientMutation.isPending ? "Saving..." : editingPatient ? "Update Patient" : "Create Patient"}
-              </Button>
+        {/* Basic Info */}
+        <TabsContent value="basic" className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="patient_id">Patient ID</Label>
+              <Input
+                id="patient_id"
+                value={formData.patient_id}
+                onChange={(e) =>
+                  setFormData({ ...formData, patient_id: e.target.value })
+                }
+                placeholder="P-2024-001"
+                required
+              />
             </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+            <div className="space-y-2">
+              <Label htmlFor="full_name">Full Name</Label>
+              <Input
+                id="full_name"
+                value={formData.full_name}
+                onChange={(e) =>
+                  setFormData({ ...formData, full_name: e.target.value })
+                }
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="date_of_birth">Date of Birth</Label>
+              <Input
+                id="date_of_birth"
+                type="date"
+                value={formData.date_of_birth}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    date_of_birth: e.target.value,
+                  })
+                }
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gender">Gender</Label>
+              <Select
+                value={formData.gender}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, gender: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="blood_type">Blood Type</Label>
+              <Select
+                value={formData.blood_type}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, blood_type: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select blood type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[
+                    "A+",
+                    "A-",
+                    "B+",
+                    "B-",
+                    "AB+",
+                    "AB-",
+                    "O+",
+                    "O-",
+                  ].map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, status: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {["Active", "Discharged", "Transferred"].map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </TabsContent>
 
-      <Dialog open={!!selectedPatientForModal} onOpenChange={() => setSelectedPatientForModal(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{modalType === 'vitals' ? 'Vitals Tracking' : 'Medical Records'} for {selectedPatientForModal?.full_name}</DialogTitle>
-          </DialogHeader>
-          {modalType === 'vitals' && (
-            <div className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Record New Vital</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={(e) => { e.preventDefault(); handleRecordVital(selectedPatientForModal!.id!); }}>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="heart_rate">Heart Rate (bpm)</Label>
-                        <Input id="heart_rate" type="number" value={newVital.heart_rate} onChange={(e) => setNewVital({ ...newVital, heart_rate: e.target.value })} />
-                      </div>
-                      <div>
-                        <Label htmlFor="temperature">Temperature (C)</Label>
-                        <Input id="temperature" type="number" value={newVital.temperature} onChange={(e) => setNewVital({ ...newVital, temperature: e.target.value })} />
-                      </div>
-                      <div>
-                        <Label htmlFor="systolic">Blood Pressure (Systolic)</Label>
-                        <Input id="systolic" type="number" value={newVital.blood_pressure_systolic} onChange={(e) => setNewVital({ ...newVital, blood_pressure_systolic: e.target.value })} />
-                      </div>
-                      <div>
-                        <Label htmlFor="diastolic">Blood Pressure (Diastolic)</Label>
-                        <Input id="diastolic" type="number" value={newVital.blood_pressure_diastolic} onChange={(e) => setNewVital({ ...newVital, blood_pressure_diastolic: e.target.value })} />
-                      </div>
-                    </div>
-                    <Button type="submit" className="mt-4">Record Vital</Button>
-                  </form>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Vitals History</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {vitalsLoading ? <p>Loading...</p> : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="min-w-[100px]">Date</TableHead>
-                            <TableHead className="min-w-[120px]">Heart Rate</TableHead>
-                            <TableHead className="min-w-[120px]">BP (S)</TableHead>
-                            <TableHead className="min-w-[120px]">BP (D)</TableHead>
-                            <TableHead className="min-w-[120px]">Temperature</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {vitals?.map((v) => (
-                            <TableRow key={v._id}>
-                              <TableCell>{new Date(v.recorded_at).toLocaleDateString()}</TableCell>
-                              <TableCell>{v.heart_rate}</TableCell>
-                              <TableCell>{v.blood_pressure_systolic}</TableCell>
-                              <TableCell>{v.blood_pressure_diastolic}</TableCell>
-                              <TableCell>{v.temperature}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+        {/* Medical Details */}
+        <TabsContent value="medical" className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="medical_history">Medical History</Label>
+            <Textarea
+              id="medical_history"
+              value={formData.medical_history}
+              onChange={(e) =>
+                setFormData({ ...formData, medical_history: e.target.value })
+              }
+              placeholder="Previous conditions, surgeries, etc."
+              rows={3}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="allergies">Allergies (comma-separated)</Label>
+            <Input
+              id="allergies"
+              value={formData.allergies}
+              onChange={(e) =>
+                setFormData({ ...formData, allergies: e.target.value })
+              }
+              placeholder="Penicillin, Nuts, Latex"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="current_medications">
+              Current Medications (comma-separated)
+            </Label>
+            <Input
+              id="current_medications"
+              value={formData.current_medications}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  current_medications: e.target.value,
+                })
+              }
+              placeholder="Aspirin, Metformin, Lisinopril"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="admission_date">Admission Date</Label>
+            <Input
+              id="admission_date"
+              type="date"
+              value={formData.admission_date}
+              onChange={(e) =>
+                setFormData({ ...formData, admission_date: e.target.value })
+              }
+            />
+          </div>
+        </TabsContent>
+
+        {/* Contact Info */}
+        <TabsContent value="contact" className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) =>
+                  setFormData({ ...formData, phone: e.target.value })
+                }
+                placeholder="+1 (555) 123-4567"
+              />
             </div>
-          )}
-          {modalType === 'records' && (
-            <div className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Add New Note</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={(e) => { e.preventDefault(); handleAddNote(selectedPatientForModal!.id!); }}>
-                    <div className="space-y-2 mb-4">
-                      <Label htmlFor="note_type">Note Type</Label>
-                      <Select value={newNote.note_type} onValueChange={(value) => setNewNote({ ...newNote, note_type: value })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="diagnosis">Diagnosis</SelectItem>
-                          <SelectItem value="treatment">Treatment</SelectItem>
-                          <SelectItem value="progress">Progress</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2 mb-4">
-                      <Label htmlFor="content">Content</Label>
-                      <Textarea
-                        id="content"
-                        value={newNote.content}
-                        onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
-                        placeholder="Enter note content"
-                        rows={5}
-                      />
-                    </div>
-                    <Button type="submit">Add Note</Button>
-                  </form>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Notes History</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {notesLoading ? <p>Loading...</p> : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="min-w-[100px]">Date</TableHead>
-                            <TableHead className="min-w-[120px]">Type</TableHead>
-                            <TableHead className="min-w-[200px]">Content</TableHead>
-                            <TableHead className="min-w-[150px]">Author</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {notes?.map((n) => (
-                            <TableRow key={n._id}>
-                              <TableCell>{new Date(n.created_at).toLocaleDateString()}</TableCell>
-                              <TableCell>{n.note_type}</TableCell>
-                              <TableCell>{n.content}</TableCell>
-                              <TableCell>{n.author.full_name}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                placeholder="patient@email.com"
+              />
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
-      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Action</DialogTitle>
-            <DialogDescription>{confirmMessage}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (confirmAction) confirmAction();
-                setConfirmDialogOpen(false);
-                setConfirmAction(null);
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="address">Address</Label>
+              <Textarea
+                id="address"
+                value={formData.address}
+                onChange={(e) =>
+                  setFormData({ ...formData, address: e.target.value })
+                }
+                placeholder="123 Main St, City, State, ZIP"
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="emergency_contact_name">
+                Emergency Contact Name
+              </Label>
+              <Input
+                id="emergency_contact_name"
+                value={formData.emergency_contact_name}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    emergency_contact_name: e.target.value,
+                  })
+                }
+                placeholder="Jane Doe"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="emergency_contact_phone">
+                Emergency Contact Phone
+              </Label>
+              <Input
+                id="emergency_contact_phone"
+                value={formData.emergency_contact_phone}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    emergency_contact_phone: e.target.value,
+                  })
+                }
+                placeholder="+1 (555) 987-6543"
+              />
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Assignment */}
+        <TabsContent value="assignment" className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="assigned_doctor">Assigned Doctor</Label>
+              <Select
+                value={formData.assigned_doctor || "unassigned"}
+                onValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    assigned_doctor:
+                      value === "unassigned" ? "" : value,
+                  })
+                }
+                disabled={staffLoading || doctors.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      staffLoading
+                        ? "Loading..."
+                        : doctors.length === 0
+                        ? "No doctors available"
+                        : "Select doctor"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {doctors.map((d) => (
+                    <SelectItem key={d.id || d._id} value={d.id || d._id}>
+                      {d.full_name} ({d.department || "N/A"})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="assigned_nurse">Assigned Nurse</Label>
+              <Select
+                value={formData.assigned_nurse || "unassigned"}
+                onValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    assigned_nurse:
+                      value === "unassigned" ? "" : value,
+                  })
+                }
+                disabled={staffLoading || nurses.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      staffLoading
+                        ? "Loading nurses..."
+                        : nurses.length === 0
+                        ? "No nurses available"
+                        : "Select nurse"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {nurses.map((n) => (
+                    <SelectItem key={n.id || n._id} value={n.id || n._id}>
+                      {n.full_name} ({n.department || "General"})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Footer */}
+      <div className="flex justify-end gap-3 pt-4 border-t">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setDialogOpen(false);
+            resetForm();
+          }}
+        >
+          Cancel
+        </Button>
+        <Button type="submit" disabled={savePatientMutation.isPending}>
+          {savePatientMutation.isPending
+            ? "Saving..."
+            : editingPatient
+            ? "Update Patient"
+            : "Create Patient"}
+        </Button>
+      </div>
+    </form>
+  </DialogContent>
+</Dialog>
+
+<Dialog open={!!selectedPatientForModal} onOpenChange={() => setSelectedPatientForModal(null)}>
+  <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>
+        {modalType === "vitals" ? "Vitals Tracking" : "Medical Records"} for{" "}
+        {selectedPatientForModal?.full_name}
+      </DialogTitle>
+    </DialogHeader>
+
+    {/* Vitals Section */}
+    {modalType === "vitals" && (
+      <div className="space-y-6">
+        {/* Record New Vital */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Record New Vital</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleRecordVital(selectedPatientForModal!.id!);
               }}
+              className="space-y-4"
             >
-              Confirm
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="heart_rate">Heart Rate (bpm)</Label>
+                  <Input
+                    id="heart_rate"
+                    type="number"
+                    value={newVital.heart_rate}
+                    onChange={(e) =>
+                      setNewVital({ ...newVital, heart_rate: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="temperature">Temperature (°C)</Label>
+                  <Input
+                    id="temperature"
+                    type="number"
+                    value={newVital.temperature}
+                    onChange={(e) =>
+                      setNewVital({ ...newVital, temperature: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="blood_pressure">Blood Pressure (mmHg)</Label>
+                  <Input
+                    id="blood_pressure"
+                    type="text"
+                    placeholder="120/80"
+                    value={newVital.blood_pressure}
+                    onChange={(e) =>
+                      setNewVital({
+                        ...newVital,
+                        blood_pressure: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="oxygen_saturation">
+                    Oxygen Saturation (%)
+                  </Label>
+                  <Input
+                    id="oxygen_saturation"
+                    type="number"
+                    value={newVital.oxygen_saturation}
+                    onChange={(e) =>
+                      setNewVital({
+                        ...newVital,
+                        oxygen_saturation: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button type="submit">Record Vital</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Vitals History */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Vitals History</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {vitalsLoading ? (
+              <p>Loading...</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Heart Rate</TableHead>
+                      <TableHead>BP</TableHead>
+                      <TableHead>Oxygen Saturation</TableHead>
+                      <TableHead>Temperature</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {vitals?.map((v) => (
+                      <TableRow key={v._id}>
+                        <TableCell>
+                          {new Date(v.recorded_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>{v.heart_rate}</TableCell>
+                        <TableCell>{v.blood_pressure}</TableCell>
+                        <TableCell>{v.oxygen_saturation}</TableCell>
+                        <TableCell>{v.temperature}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    )}
+
+    {/* Records Section */}
+    {modalType === "records" && (
+      <div className="space-y-6">
+        {/* Add Note */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Add New Note</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleAddNote(selectedPatientForModal!.id!);
+              }}
+              className="space-y-4"
+            >
+              <div className="space-y-2">
+                <Label htmlFor="note_type">Note Type</Label>
+                <Select
+                  value={newNote.note_type}
+                  onValueChange={(value) =>
+                    setNewNote({ ...newNote, note_type: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="diagnosis">Diagnosis</SelectItem>
+                    <SelectItem value="treatment">Treatment</SelectItem>
+                    <SelectItem value="progress">Progress</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="content">Content</Label>
+                <Textarea
+                  id="content"
+                  value={newNote.content}
+                  onChange={(e) =>
+                    setNewNote({ ...newNote, content: e.target.value })
+                  }
+                  placeholder="Enter note content"
+                  rows={5}
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <Button type="submit">Add Note</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Notes History */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Notes History</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {notesLoading ? (
+              <p>Loading...</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Content</TableHead>
+                      <TableHead>Author</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {notes?.map((n) => (
+                      <TableRow key={n._id}>
+                        <TableCell>
+                          {new Date(n.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>{n.note_type}</TableCell>
+                        <TableCell>{n.content}</TableCell>
+                        <TableCell>{n.author.full_name}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    )}
+  </DialogContent>
+</Dialog>
+
+{/* Confirm Dialog */}
+<Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Confirm Action</DialogTitle>
+      <DialogDescription>{confirmMessage}</DialogDescription>
+    </DialogHeader>
+    <DialogFooter>
+      <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
+        Cancel
+      </Button>
+      <Button
+        variant="destructive"
+        onClick={() => {
+          if (confirmAction) confirmAction();
+          setConfirmDialogOpen(false);
+          setConfirmAction(null);
+        }}
+      >
+        Confirm
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
       <Card className="mt-6">
         <CardContent className="p-0">
           {patientsLoading ? (

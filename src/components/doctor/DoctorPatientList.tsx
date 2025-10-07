@@ -17,7 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Heart, Activity, CheckCircle, UserCheck, AlertTriangle, Calendar, Thermometer } from "lucide-react";
+import { Heart, Activity, CheckCircle, UserCheck, AlertTriangle, Calendar, Thermometer, BluetoothConnected, DroneIcon, DropletIcon } from "lucide-react";
 import { toast } from "react-toastify";
 import type { AxiosError } from "axios";
 import { useNavigate } from "react-router-dom";
@@ -63,8 +63,7 @@ interface Patient {
 
 interface Vital {
   heart_rate: number;
-  blood_pressure_systolic: number;
-  blood_pressure_diastolic: number;
+  blood_pressure: number;
   temperature: number;
   oxygen_saturation: number;
   recorded_at: string;
@@ -222,8 +221,8 @@ return (
                           <p><span className="font-medium">Condition:</span> {patient.condition}</p>
                         </div>
                         <div>
-                          <p className="flex items-center gap-1"><Heart className="h-4 w-4 text-red-500" /> {v?.heart_rate ?? "-"} BPM</p>
-                          <p className="flex items-center gap-1"><Activity className="h-4 w-4 text-blue-500" /> {bp}</p>
+                          <p className="flex items-center gap-1"><DropletIcon className="h-4 w-4 text-red-500" /> {v?.heart_rate ?? "-"} BPM</p>
+                          <p className="flex items-center gap-1"><Activity className="h-4 w-4 text-blue-500" /> {v?.blood_pressure?? "-"}</p>
                           <p className="flex items-center gap-1"><Thermometer className="h-4 w-4 text-orange-500" /> {v?.temperature ?? "-"}°C</p>
                           <p className="flex items-center gap-1"><Activity className="h-4 w-4 text-green-500" /> {v?.oxygen_saturation ?? "-"}%</p>
                         </div>

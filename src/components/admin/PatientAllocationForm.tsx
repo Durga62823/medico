@@ -165,12 +165,14 @@ useEffect(() => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    console.log(form)
     try {
       let result: PatientAllocation;
-      
-    //   if (form.id) result = await allocationApi.put(form.id, form);
+
+      if (form.id) result = await allocationApi.put(form.id, form);
      result = await allocationApi.post(form);
-     console.error(result);
+    //  console.(result);
+      // console.log(result)
       toast.success("Allocation saved");
       setForm(result);
       if (!allocations.some((a) => a.id === result.id)) setAllocations((old) => [...old, result]);
@@ -214,7 +216,7 @@ const handleDischarge = async (id:string) => {
 };
 
 
-console.log(allocations)
+// console.log(allocations)
   return (
 <div className="p-4">
     <Tabs defaultValue="allocations" className="w-full">

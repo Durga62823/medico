@@ -6,7 +6,7 @@ import { userAPI } from "@/services/api";
 // import { PatientPreview } from "@/components/doctor/PatientPreview";
 // import { AppointmentTimeline } from "@/components/doctor/AppointmentTimeline";
 // import { PatientPreview } from "@/components/doctor/PatientPreview";
-
+import NurseDashboard from "@/components/nurse/NurseDashboard";
 
 const safeJSONParse = (value: string | null) => {
   if (!value || value === "undefined" || value === "null") return null;
@@ -82,8 +82,8 @@ const Index = () => {
      return <DoctorDashboard /> 
   else if (role === "admin") {
     return <Dashboard onLogout={handleLogout} />; } 
-  else if (role === "Nurse") { 
-    return <div>Nurse Dashboard Coming Soon</div>; } 
+  else if (role === "nurse") { 
+    return <NurseDashboard/>; } 
   else {
     return <div>Unauthorized Access</div>; 
 } };
