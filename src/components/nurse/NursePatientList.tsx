@@ -56,8 +56,7 @@ interface Patient {
 
 interface Vital {
   heart_rate: number;
-  blood_pressure_systolic: number;
-  blood_pressure_diastolic: number;
+  blood_pressure: number;
   temperature: number;
   oxygen_saturation: number;
   recorded_at: string;
@@ -165,7 +164,7 @@ const NursePatientList = () => {
         <div className="grid gap-4">
           {patients.map((patient, index) => {
             const v = vitalsMap[patient._id];
-            const bp = v ? `${v.blood_pressure_systolic}/${v.blood_pressure_diastolic}` : "-";
+            const bp = v ? `${v.blood_pressure}` : "-";
             return (
               <motion.div
                 key={patient._id}
@@ -191,8 +190,6 @@ const NursePatientList = () => {
                           <div>
                             <p><span className="font-medium">Age:</span> {calculateAge(patient.date_of_birth)}</p>
                             <p><span className="font-medium">Gender:</span> {patient.gender}</p>
-                            <p><span className="font-medium">Room:</span> {patient.room}</p>
-                            <p><span className="font-medium">Condition:</span> {patient.condition}</p>
                           </div>
                           <div>
                             <p className="flex items-center gap-1"><Heart className="h-4 w-4 text-red-500" /> {v?.heart_rate ?? "-"} BPM</p>

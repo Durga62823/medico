@@ -189,7 +189,7 @@ const NurseDashboard = () => {
             <Menu className="h-5 w-5" />
           </Button>
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-pink-500 to-red-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg  flex items-center justify-center">
               <HeartPulse className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -254,11 +254,11 @@ const NurseDashboard = () => {
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.6 }}
         >
-          <Card className="shadow-2xl border-2 border-primary/10">
+          <Card className="shadow-xl border-2 border-primary/10">
             <CardContent className="p-4 lg:p-6">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 {/* Horizontal tabs list for desktop, hidden on mobile */}
-                <TabsList className="hidden md:grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 w-full bg-gray-100 dark:bg-gray-800 p-2 rounded-xl">
+                <TabsList className="hidden md:grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 w-full  dark:bg-gray-800 p-2 rounded-xl">
                   {TABS.map(({ value, label, icon: Icon }) => (
                     <motion.div
                       key={value}
@@ -269,7 +269,7 @@ const NurseDashboard = () => {
                         value={value}
                         onClick={() => setActiveTab(value)}
                         className={`flex items-center justify-center md:justify-start px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                          activeTab === value ? "bg-primary text-white shadow-lg shadow-primary/30" : "hover:bg-accent/50"
+                          activeTab === value ? "bg-primary text-black shadow-lg shadow-primary/30" : "hover:bg-accent/50"
                         } rounded-lg`}
                       >
                         <Icon className="h-4 w-4 mr-2" /> {label}

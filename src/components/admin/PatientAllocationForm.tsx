@@ -227,7 +227,7 @@ const handleDischarge = async (id:string) => {
 
       {/* Allocations Tab */}
     <TabsContent value="allocations">
-    <div className="space-y-6 bg-white rounded-lg shadow-sm p-8">
+    <div className="space-y-6  rounded-lg shadow-sm p-8">
         <h3 className="text-lg font-bold mb-4 text-medical-primary">All Allocations</h3>
         <ul className="divide-y">
         {allocations.length > 0 ? (

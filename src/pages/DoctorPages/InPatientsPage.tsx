@@ -71,6 +71,7 @@ name: string;
   vitals: Vitals;
   alerts: string[]; 
   lastUpdate: string; };
+
 const patientCardVariants = {
   hidden: { opacity: 0, y: 30 },
   visible: { opacity: 1, y: 0 }
@@ -104,13 +105,17 @@ export default function InPatientsPage() {
 const [patients, setPatients] = useState<PatientAllocation[]>([])
   const user = getStoredUser();
   const DoctorId = user?.id || "";
+console.log(patients)
+  const [selectedDepartment, setSelectedDepartment] = useState("");
 
   // Fetch patients
 const { data: patientData  = [], isLoading: isLoadingPatients } = useQuery<Patient[]>(
   {
-  queryKey: ["assignedPatients", DoctorId],
+  queryKey: ["assignedPatients", DoctorId,selectedDepartment],
   queryFn: async () => { if (!DoctorId) return [];
-  const res = await patientAPI.getAllPatients({ assigned_doctor:DoctorId });
+  const params = { assigned_nurse: DoctorId };
+  if (selectedDepartment) params.department = selectedDepartment;
+  const res = await patientAPI.getAllPatients(params);
    // console.log(res) 
   return Array.isArray(res.data) ? res.data : []; }, enabled: !!DoctorId, });
 
@@ -163,7 +168,7 @@ const { data: patientData  = [], isLoading: isLoadingPatients } = useQuery<Patie
 
     return () => socket.disconnect();
   }, []);
-
+// console.log(patientData)
   // Stats
   const totalPatients = patients.length;
   const criticalCount = patients.filter(p => p.condition === 'critical').length;
