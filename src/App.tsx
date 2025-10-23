@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PatientOverview } from "./components/PatientOverview";
 import NotFound from "./pages/NotFound";
-import { AIAssistant } from "./components/AIAssistant";
+import FloatingAIAssistant from "./components/FloatingAIAssistant";
 
 const queryClient = new QueryClient();
 
@@ -13,8 +13,8 @@ const App = () => (
     <TooltipProvider>
       <Sonner />
       <BrowserRouter>
+        <FloatingAIAssistant />
         <Routes>
-          <Route path="/" element={<AIAssistant/>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
 
           <Route path="/patients/:patientId" element={<PatientOverview />} />

@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/tabs";
 import { VitalSignChart } from "./VitalSignChart";
 import { AlertsPanel } from "./AlertsPanel";
-import { AIAssistant } from "./AIAssistant";
+// AIAssistant moved to a floating global component
 import { PatientOverview } from "./PatientOverview";
 import PatientManagement from "./PatientManagement";
 import UserManagement from "./admin/UserManagement";
@@ -384,19 +384,17 @@ export function Dashboard({ onLogout }: DashboardProps) {
                     icon={Droplets}
                   />
                 </div>
-                <div ref={alertsRef}>
-                  <AlertsPanel />
-                </div>
-              </div>
-              <div className="space-y-6">
-                <PatientOverview />
-                <NotesSection patientId={selectedId} userRole={(userProfile.role || "").toLowerCase()} />
-                <AIAssistant />
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="patients" className="space-y-6">
+      <div ref={alertsRef}>
+        <AlertsPanel />
+      </div>
+    </div>
+    <div className="space-y-6">
+      <PatientOverview />
+      <NotesSection patientId={selectedId} userRole={(userProfile.role || "").toLowerCase()} />
+      {/* AIAssistant moved to floating component */}
+    </div>
+  </div>
+</TabsContent>          <TabsContent value="patients" className="space-y-6">
             <PatientManagement userRole={(userProfile.role || "").toLowerCase()} userId={userProfile.id} />
           </TabsContent>
 

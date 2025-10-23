@@ -148,7 +148,7 @@ const PatientBilling = () => {
                       <div className="grid grid-cols-2 gap-3 text-sm text-gray-600">
                         <div>
                           <span className="font-medium">Amount:</span>{" "}
-                          <span className="text-lg font-bold text-gray-900">
+                          <span className="text-lg font-bold text-foreground">
                             ${billing.amount?.toFixed(2) || "0.00"}
                           </span>
                         </div>

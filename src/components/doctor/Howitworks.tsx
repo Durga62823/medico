@@ -42,7 +42,7 @@ const features = [
 // Small card for each step
 function FeatureCard({ icon, title, description }) {
   return (
-    <div className="bg-white shadow rounded-2xl px-6 py-8 flex flex-col items-center text-center h-full">
+  <div className="bg-card shadow rounded-2xl px-6 py-8 flex flex-col items-center text-center h-full">
       {icon}
       <h4 className="mb-2 text-lg font-semibold">{title}</h4>
       <p className="text-sm text-muted-foreground">{description}</p>
@@ -64,7 +64,7 @@ export default function HowItWorks() {
           className="text-center mb-12"
           variants={fadeInUpVariant}
         >
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">How It Works</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">How It Works</h2>
           <p className="text-lg text-gray-600">
             Simple steps to make a difference in intelligent healthcare
           </p>

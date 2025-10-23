@@ -147,7 +147,7 @@ const PatientManagementDashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column: Patient List */}
   <div className="lg:col-span-2">
-  <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+  <div className="bg-card rounded-xl shadow-md p-6 border border-border">
     {/* Search Box */}
     <div className="mb-6">
       <div className="relative">
@@ -202,7 +202,7 @@ const PatientManagementDashboard = () => {
           >
             <div className="flex justify-between items-center">
               <div>
-                <h3 className="font-medium text-gray-900">{patient.full_name}</h3>
+                <h3 className="font-medium text-foreground">{patient.full_name}</h3>
                 <p className="text-sm text-gray-500 mt-1">{patient.email}</p>
               </div>
               <div className="text-xs text-gray-400">
@@ -223,7 +223,7 @@ const PatientManagementDashboard = () => {
 {/* Right Column: Patient Preview */}
 <div className="">
   {selectedPatient && (
-    <div className="bg-white rounded-lg shadow-lg p-6 border border-gray-200">
+  <div className="bg-card rounded-lg shadow-lg p-6 border border-border">
       <h2 className="text-2xl font-bold text-blue-600 mb-6">Patient Preview</h2>
 
       {/* Personal Info */}
@@ -267,15 +267,15 @@ const PatientManagementDashboard = () => {
       <div className="mb-6 p-4 rounded-lg border border-gray-200 bg-gray-50">
         <h3 className="text-lg font-semibold text-gray-700 mb-3">Vitals</h3>
         <div className="grid grid-cols-3 gap-4 text-sm text-gray-600">
-          <div className="bg-white p-3 rounded-lg shadow text-center">
+          <div className="bg-card p-3 rounded-lg shadow text-center">
             <p className="font-medium text-gray-500">Blood Pressure</p>
             <p className="font-semibold text-purple-800">{selectedPatient.vitals.bloodPressure || "N/A"}</p>
           </div>
-          <div className="bg-white p-3 rounded-lg shadow text-center">
+          <div className="bg-card p-3 rounded-lg shadow text-center">
             <p className="font-medium text-gray-500">Heart Rate</p>
             <p className="font-semibold text-purple-800">{selectedPatient.vitals.heartRate ? `${selectedPatient.vitals.heartRate} bpm` : "N/A"}</p>
           </div>
-          <div className="bg-white p-3 rounded-lg shadow text-center">
+          <div className="bg-card p-3 rounded-lg shadow text-center">
             <p className="font-medium text-gray-500">Temperature</p>
             <p className="font-semibold text-purple-800">{selectedPatient.vitals.temperature ? `${selectedPatient.vitals.temperature}°F` : "N/A"}</p>
           </div>

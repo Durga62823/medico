@@ -24,7 +24,6 @@ const Index = () => {
   const [role, setRole] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const [selectedPatient, setSelectedPatient] = useState("68a2ca62fe11a3ad9d1ecb99");
 
   useEffect(() => {
     const storedToken = localStorage.getItem("token");

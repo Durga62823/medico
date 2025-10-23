@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { VitalSignCard } from "@/components/nurse/VitalSignCard";
 import { TimelineChart } from "@/components/nurse/TimelineChart";
 import { AlertsCard } from "@/components/nurse/AlertsCard";
-import { AIAssistant } from "@/components/AIAssistant";
+// AIAssistant moved to FloatingAIAssistant mounted in App
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Brain, CheckCircle, Heart, Thermometer, Wind, Droplets } from "lucide-react";
 import { patientAPI, vitalAPI } from "@/services/api";
@@ -197,7 +197,7 @@ const Index = () => {
 
   {/* Right Side - 60% */}
   <div className="w-[50%] h-[calc(100vh-4rem)]  p-4">
-   <AIAssistant/>
+  {/* Floating assistant is globally mounted; inline instance removed */}
   </div>
 </div>
 

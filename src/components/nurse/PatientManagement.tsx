@@ -185,7 +185,7 @@ const PatientManagementDashboard = () => {
               >
                 <div className="flex justify-between items-center">
                   <div>
-                    <h3 className="font-medium text-gray-900">{patient.full_name}</h3>
+                    <h3 className="font-medium text-foreground">{patient.full_name}</h3>
                     <p className="text-sm text-gray-500 mt-1">{patient.email}</p>
                   </div>
                   <div className="text-xs text-gray-400">
@@ -204,7 +204,7 @@ const PatientManagementDashboard = () => {
         <div className="w-[60%] p-6  rounded-lg shadow-lg border border-gray-200 overflow-y-auto">
           {selectedPatient ? (
             <div>
-              <h2 className="text-2xl font-bold text-black mb-6">Patient Preview</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-6">Patient Preview</h2>
 
               {/* Personal Info */}
               <div className="mb-6 p-4 rounded-lg border border-gray-200 ">
@@ -212,25 +212,25 @@ const PatientManagementDashboard = () => {
                 <div className="space-y-2 text-sm text-gray-600">
                   <p>
                     Name:{" "}
-                    <span className="font-semibold text-black">
+                    <span className="font-semibold text-foreground">
                       {selectedPatient.full_name}
                     </span>
                   </p>
                   <p>
                     Age:{" "}
-                    <span className="font-semibold text-black">
+                    <span className="font-semibold text-foreground">
                       {calculateAge(selectedPatient.date_of_birth)}
                     </span>
                   </p>
                   <p>
                     Gender:{" "}
-                    <span className="font-semibold text-black">
+                    <span className="font-semibold text-foreground">
                       {selectedPatient.gender}
                     </span>
                   </p>
                   <p>
                     Blood Type:{" "}
-                    <span className="font-semibold text-black">
+                    <span className="font-semibold text-foreground">
                       {selectedPatient.blood_type}
                     </span>
                   </p>
@@ -243,7 +243,7 @@ const PatientManagementDashboard = () => {
                 <div className="space-y-2 text-sm text-gray-600">
                   <p>
                     Allergies:{" "}
-                    <span className="font-semibold text-black">
+                    <span className="font-semibold text-foreground">
                       {selectedPatient.allergies.length
                         ? selectedPatient.allergies.join(", ")
                         : "N/A"}
@@ -251,7 +251,7 @@ const PatientManagementDashboard = () => {
                   </p>
                   <p>
                     Current Medications:{" "}
-                    <span className="font-semibold text-black">
+                    <span className="font-semibold text-foreground">
                       {selectedPatient.current_medications.length
                         ? selectedPatient.current_medications.join(", ")
                         : "N/A"}
@@ -259,7 +259,7 @@ const PatientManagementDashboard = () => {
                   </p>
                   <p>
                     History:{" "}
-                    <span className="font-semibold text-black">
+                    <span className="font-semibold text-foreground">
                       {selectedPatient.medical_history.length
                         ? selectedPatient.medical_history.join(", ")
                         : "N/A"}

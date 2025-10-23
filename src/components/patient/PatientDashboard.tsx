@@ -1,60 +1,95 @@
-import React, { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  Calendar, 
-  FileText, 
-  DollarSign, 
-  Activity, 
-  Bell, 
-  User, 
-  LogOut,
-  Menu,
-  X,
-  HeartPulse,
-  ClipboardList,
-  CreditCard,
-  TestTube2
-} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Calendar, DollarSign, Activity, Bell, User, LogOut, Heart, Home, TestTube2, ClipboardList, HeartPulse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { motion, AnimatePresence } from "framer-motion";
-import { userAPI } from "@/services/api";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { userAPI, patientAPI, appointmentAPI, labReportAPI, billingAPI, vitalAPI } from "@/services/api";
 import PatientAppointments from "./PatientAppointments";
 import PatientVitals from "./PatientVitals";
 import PatientBilling from "./PatientBilling";
 import PatientLabReports from "./PatientLabReports";
 import PatientProfile from "./PatientProfile";
 
-const TABS = [
-  { value: "overview", label: "Overview", icon: Activity },
-  { value: "appointments", label: "Appointments", icon: Calendar },
-  { value: "vitals", label: "My Vitals", icon: HeartPulse },
-  { value: "lab-reports", label: "Lab Reports", icon: TestTube2 },
-  { value: "billing", label: "Billing", icon: DollarSign },
-  { value: "profile", label: "Profile", icon: User },
-];
+interface UserData {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
+}
 
 const PatientDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [userData, setUserData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [patientData, setPatientData] = useState<any>(null);
+
+  const { data: userProfile, isLoading: loading } = useQuery<UserData>({
+    queryKey: ["profile"],
+    queryFn: async () => {
+      const res = await userAPI.profile();
+      return res.data;
+    },
+  });
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const response = await userAPI.profile();
-        setUserData(response.data);
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (userProfile) {
+      setUserData(userProfile);
+      fetchPatientData(userProfile.email);
+    }
+  }, [userProfile]);
 
-    fetchUserData();
-  }, []);
+  const fetchPatientData = async (email: string) => {
+    try {
+      const patientsResponse = await patientAPI.getAllPatients();
+      const matchedPatient = patientsResponse.data.find((p: any) => p.email === email);
+      setPatientData(matchedPatient);
+    } catch (error) {
+      console.error("Error fetching patient data:", error);
+    }
+  };
+
+  const { data: appointmentsData } = useQuery({
+    queryKey: ["patient-appointments-stats", patientData?._id],
+    queryFn: async () => {
+      if (!patientData?._id) return { data: [] };
+      const response = await appointmentAPI.getAppointments({ patient_id: patientData._id });
+      return response.data;
+    },
+    enabled: !!patientData?._id,
+  });
+
+  const { data: labReportsData } = useQuery({
+    queryKey: ["patient-lab-stats", patientData?._id],
+    queryFn: async () => {
+      if (!patientData?._id) return [];
+      const response = await labReportAPI.getLabReports({ patient_id: patientData._id });
+      return response.data;
+    },
+    enabled: !!patientData?._id,
+  });
+
+  const { data: billingsData } = useQuery({
+    queryKey: ["patient-billing-stats", patientData?._id],
+    queryFn: async () => {
+      if (!patientData?._id) return [];
+      const response = await billingAPI.getBillingsForPatient(patientData._id);
+      return response.data;
+    },
+    enabled: !!patientData?._id,
+  });
+
+  const { data: vitalsData } = useQuery({
+    queryKey: ["patient-vitals-stats", patientData?._id],
+    queryFn: async () => {
+      if (!patientData?._id) return [];
+      const response = await vitalAPI.getVitals(patientData._id);
+      return response.data;
+    },
+    enabled: !!patientData?._id,
+  });
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -62,304 +97,67 @@ const PatientDashboard = () => {
     navigate("/auth");
   };
 
+  const appointments = appointmentsData?.data || [];
+  const upcomingAppointments = appointments.filter((apt: any) => apt.status?.toLowerCase() === "scheduled" && new Date(apt.appointment_date) >= new Date());
+  const labReports = labReportsData || [];
+  const pendingLabReports = labReports.filter((r: any) => r.status?.toLowerCase() !== "completed");
+  const billings = billingsData || [];
+  const outstandingBills = billings.filter((b: any) => b.status?.toLowerCase() !== "paid");
+  const totalOutstanding = outstandingBills.reduce((sum: number, b: any) => sum + (b.amount || 0), 0);
+  const vitals = vitalsData || [];
+  const latestVitals = vitals[vitals.length - 1] || {};
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-background to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-medical-primary/10 via-background to-medical-secondary/10 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-600 border-solid mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading your dashboard...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-medical-primary mx-auto" />
+          <p className="mt-4 text-medical-text">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-blue-50 via-background to-purple-50">
-      {/* Mobile Sidebar Overlay */}
-      <AnimatePresence>
-        {sidebarOpen && (
-          <>
-            <motion.div
-              className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSidebarOpen(false)}
-            />
-            <motion.div
-              className="fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-900 z-50 shadow-2xl p-4 flex flex-col lg:hidden"
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "tween", duration: 0.3 }}
-            >
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-                    <HeartPulse className="w-5 h-5 text-white" />
-                  </div>
-                  <h1 className="text-xl font-bold">MedIron</h1>
-                </div>
-                <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
-                  <X className="h-5 w-5" />
-                </Button>
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+        <div className="container flex h-16 items-center justify-between px-6">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
+                <Heart className="w-5 h-5 text-white" />
               </div>
-              <SidebarContent 
-                activeTab={activeTab} 
-                setActiveTab={(tab) => {
-                  setActiveTab(tab);
-                  setSidebarOpen(false);
-                }} 
-                handleLogout={handleLogout}
-              />
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Desktop Sidebar */}
-      <div className="hidden lg:flex w-64 bg-white dark:bg-gray-900 shadow-xl flex-col">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center space-x-2">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-              <HeartPulse className="w-6 h-6 text-white" />
+              <div>
+                <h1 className="text-xl font-bold">MedAIron</h1>
+                <p className="text-xs text-muted-foreground">Patient Portal</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold">MedIron</h1>
-              <p className="text-xs text-gray-500">Patient Portal</p>
-            </div>
+          </div>
+          <div className="flex items-center space-x-4">
+            <Badge variant="outline" className="hidden sm:inline-flex">{userData?.full_name || "Patient"}</Badge>
+            <Button variant="outline" size="sm"><Bell className="w-4 h-4 mr-2" /><span className="hidden sm:inline">Notifications</span></Button>
+            <Button variant="ghost" size="sm" onClick={handleLogout}><LogOut className="w-4 h-4 mr-2" /><span className="hidden sm:inline">Logout</span></Button>
           </div>
         </div>
-        <SidebarContent 
-          activeTab={activeTab} 
-          setActiveTab={setActiveTab} 
-          handleLogout={handleLogout}
-        />
+      </header>
+      <div className="container mx-auto p-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="flex flex-nowrap overflow-x-auto space-x-2 w-full px-2">
+            <TabsTrigger value="overview" className="flex items-center space-x-2 whitespace-nowrap"><Home className="w-4 h-4" /><span className="hidden sm:inline">Overview</span></TabsTrigger>
+            <TabsTrigger value="appointments" className="flex items-center space-x-2 whitespace-nowrap"><Calendar className="w-4 h-4" /><span className="hidden sm:inline">Appointments</span></TabsTrigger>
+            <TabsTrigger value="vitals" className="flex items-center space-x-2 whitespace-nowrap"><HeartPulse className="w-4 h-4" /><span className="hidden sm:inline">My Vitals</span></TabsTrigger>
+            <TabsTrigger value="lab-reports" className="flex items-center space-x-2 whitespace-nowrap"><TestTube2 className="w-4 h-4" /><span className="hidden sm:inline">Lab Reports</span></TabsTrigger>
+            <TabsTrigger value="billing" className="flex items-center space-x-2 whitespace-nowrap"><DollarSign className="w-4 h-4" /><span className="hidden sm:inline">Billing</span></TabsTrigger>
+            <TabsTrigger value="profile" className="flex items-center space-x-2 whitespace-nowrap"><User className="w-4 h-4" /><span className="hidden sm:inline">Profile</span></TabsTrigger>
+          </TabsList>
+          <TabsContent value="overview" className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"><Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Upcoming Appointments</CardTitle><Calendar className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{upcomingAppointments.length}</div><p className="text-xs text-muted-foreground">{upcomingAppointments.length > 0 ? "Next appointment scheduled" : "No upcoming appointments"}</p></CardContent></Card><Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Lab Reports</CardTitle><TestTube2 className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{labReports.length}</div><p className="text-xs text-muted-foreground">{pendingLabReports.length} pending results</p></CardContent></Card><Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Outstanding Bills</CardTitle><DollarSign className="h-4 w-4 text-vital-critical" /></CardHeader><CardContent><div className="text-2xl font-bold text-vital-critical">${totalOutstanding.toFixed(2)}</div><p className="text-xs text-muted-foreground">{outstandingBills.length} {outstandingBills.length === 1 ? "bill" : "bills"} pending</p></CardContent></Card><Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Health Status</CardTitle><Activity className="h-4 w-4 text-vital-normal" /></CardHeader><CardContent><div className="text-2xl font-bold text-vital-normal">Good</div><p className="text-xs text-muted-foreground">{vitals.length > 0 ? "Recent vitals recorded" : "No recent vitals"}</p></CardContent></Card></div></TabsContent>
+          <TabsContent value="appointments" className="space-y-6"><PatientAppointments /></TabsContent>
+          <TabsContent value="vitals" className="space-y-6"><PatientVitals /></TabsContent>
+          <TabsContent value="lab-reports" className="space-y-6"><PatientLabReports /></TabsContent>
+          <TabsContent value="billing" className="space-y-6"><PatientBilling /></TabsContent>
+          <TabsContent value="profile" className="space-y-6"><PatientProfile userData={userData} /></TabsContent>
+        </Tabs>
       </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="lg:hidden"
-                onClick={() => setSidebarOpen(true)}
-              >
-                <Menu className="h-6 w-6" />
-              </Button>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
-                  {TABS.find(tab => tab.value === activeTab)?.label || "Dashboard"}
-                </h2>
-                <p className="text-sm text-gray-500">
-                  Welcome back, {userData?.full_name || "Patient"}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="icon">
-                <Bell className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-        </header>
-
-        {/* Content Area */}
-        <main className="flex-1 overflow-y-auto p-6">
-          {activeTab === "overview" && <OverviewTab userData={userData} />}
-          {activeTab === "appointments" && <PatientAppointments />}
-          {activeTab === "vitals" && <PatientVitals />}
-          {activeTab === "lab-reports" && <PatientLabReports />}
-          {activeTab === "billing" && <PatientBilling />}
-          {activeTab === "profile" && <PatientProfile userData={userData} />}
-        </main>
-      </div>
-    </div>
-  );
-};
-
-const SidebarContent = ({ activeTab, setActiveTab, handleLogout }) => (
-  <>
-    <nav className="flex-1 p-4">
-      <ul className="space-y-2">
-        {TABS.map(({ value, label, icon: Icon }) => (
-          <li key={value}>
-            <Button
-              variant={activeTab === value ? "secondary" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => setActiveTab(value)}
-            >
-              <Icon className="h-5 w-5 mr-3" />
-              {label}
-            </Button>
-          </li>
-        ))}
-      </ul>
-    </nav>
-    <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-      <Button
-        variant="ghost"
-        className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-        onClick={handleLogout}
-      >
-        <LogOut className="h-5 w-5 mr-3" />
-        Logout
-      </Button>
-    </div>
-  </>
-);
-
-const OverviewTab = ({ userData }) => {
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center">
-              <Calendar className="h-4 w-4 mr-2" />
-              Upcoming Appointments
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">3</div>
-            <p className="text-xs text-blue-100 mt-1">Next: Tomorrow, 10:00 AM</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center">
-              <TestTube2 className="h-4 w-4 mr-2" />
-              Lab Reports
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">5</div>
-            <p className="text-xs text-green-100 mt-1">2 pending results</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center">
-              <DollarSign className="h-4 w-4 mr-2" />
-              Outstanding Bills
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">$240</div>
-            <p className="text-xs text-purple-100 mt-1">1 pending payment</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center">
-              <HeartPulse className="h-4 w-4 mr-2" />
-              Health Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">Good</div>
-            <p className="text-xs text-orange-100 mt-1">Last check: 2 days ago</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Calendar className="h-5 w-5 mr-2" />
-              Recent Appointments
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                <div>
-                  <p className="font-medium">Dr. Sarah Johnson</p>
-                  <p className="text-sm text-gray-600">General Checkup</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium">Oct 20, 2025</p>
-                  <p className="text-xs text-gray-500">Completed</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                <div>
-                  <p className="font-medium">Dr. Michael Chen</p>
-                  <p className="text-sm text-gray-600">Follow-up</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium">Oct 22, 2025</p>
-                  <p className="text-xs text-green-600">Upcoming</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Activity className="h-5 w-5 mr-2" />
-              Recent Vital Signs
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Blood Pressure</span>
-                <span className="font-medium">120/80 mmHg</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Heart Rate</span>
-                <span className="font-medium">72 bpm</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Temperature</span>
-                <span className="font-medium">98.6°F</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Weight</span>
-                <span className="font-medium">165 lbs</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <ClipboardList className="h-5 w-5 mr-2" />
-            Health Summary
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <h4 className="font-medium mb-2">Current Medications</h4>
-              <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-                <li>Lisinopril 10mg - Once daily</li>
-                <li>Metformin 500mg - Twice daily</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-medium mb-2">Known Allergies</h4>
-              <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-                <li>Penicillin</li>
-                <li>Peanuts</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

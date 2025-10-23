@@ -169,7 +169,7 @@ const PatientLabReports = () => {
                         </div>
                       </div>
                       {report.notes && (
-                        <p className="text-sm text-gray-600 mt-2 p-2 bg-white rounded">
+                        <p className="text-sm text-muted-foreground mt-2 p-2 bg-card rounded">
                           {report.notes}
                         </p>
                       )}

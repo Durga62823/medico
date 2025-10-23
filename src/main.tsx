@@ -9,6 +9,7 @@ import Index from "./pages/Index.tsx";
 import Auth from "./pages/Auth.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import ThemeToggle from "@/components/ThemeToggle";
+import FloatingAIAssistant from "./components/FloatingAIAssistant";
 
 const queryClient = new QueryClient();
 
@@ -20,6 +21,10 @@ createRoot(document.getElementById("root")!).render(
         <div className="fixed right-4 top-4 z-50 flex items-center gap-3">
           <ThemeToggle />
         </div>
+        
+        {/* Floating AI Assistant - Global */}
+        <FloatingAIAssistant />
+        
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
@@ -30,16 +35,3 @@ createRoot(document.getElementById("root")!).render(
     </QueryClientProvider>
   </StrictMode>
 );
-// import React from "react";
-// import ReactDOM from "react-dom/client";
-// import { BrowserRouter } from "react-router-dom";
-// import App from "./App";
-// import "./index.css";
-
-// ReactDOM.createRoot(document.getElementById("root")!).render(
-//   <React.StrictMode>
-//     <BrowserRouter>
-//       <App />
-//     </BrowserRouter>
-//   </React.StrictMode>
-// );

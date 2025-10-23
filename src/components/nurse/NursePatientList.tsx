@@ -149,14 +149,14 @@ const NursePatientList = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">Current Patients</h3>
+  <h3 className="text-lg font-semibold text-foreground">Current Patients</h3>
         <Badge variant="secondary" className="text-sm">{patients.length} Active</Badge>
       </div>
       {patients.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
             <UserCheck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No patients assigned</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-2">No patients assigned</h3>
             <p className="text-gray-500">You currently have no active patients to manage.</p>
           </CardContent>
         </Card>
