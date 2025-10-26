@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { io } from "socket.io-client";
+import debounce from "lodash.debounce";
 import { patientAPI } from "@/services/api";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // JWT decode utility
 function decodeJwt(token: string) {
@@ -31,19 +33,14 @@ function getStoredUser() {
 function calculateAge(dobString: string) {
   const dob = new Date(dobString);
   const today = new Date();
-
   let age = today.getFullYear() - dob.getFullYear();
   const monthDiff = today.getMonth() - dob.getMonth();
   const dayDiff = today.getDate() - dob.getDate();
-
-  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
-    age--;
-  }
-
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) age--;
   return age;
 }
 
-// Patient interface updated with all fields
+// Interface
 interface Patient {
   id: string;
   name: string;
@@ -60,7 +57,7 @@ interface Patient {
   medical_history: string[];
   current_medications: string[];
   allergies: string[];
-  status: 'Active' | 'Inactive' | 'Scheduled' | 'Ready';
+  status: "Active" | "Inactive" | "Scheduled" | "Ready";
   createdAt: string;
   updatedAt: string;
   vitals: {
@@ -74,11 +71,24 @@ interface Patient {
 const PatientManagementDashboard = () => {
   const queryClient = useQueryClient();
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchText, setSearchText] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const user = getStoredUser();
   const doctorId = user?.id || "";
 
-  const { data: patients = [], isLoading } = useQuery<Patient[]>({
+  const debounceSearch = useCallback(
+    debounce((query: string) => {
+      setSearchQuery(query);
+    }, 300),
+    []
+  );
+
+  const onSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchText(e.target.value);
+    debounceSearch(e.target.value);
+  };
+
+  const { data: patients = [], isLoading, error } = useQuery<Patient[]>({
     queryKey: ["assignedPatients", doctorId],
     queryFn: async () => {
       if (!doctorId) return [];
@@ -88,12 +98,20 @@ const PatientManagementDashboard = () => {
     enabled: !!doctorId,
   });
 
+  const filteredPatients = patients.filter((p) =>
+    p.full_name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   useEffect(() => {
+    if (!selectedPatient && filteredPatients.length > 0)
+      setSelectedPatient(filteredPatients[0]);
+  }, [filteredPatients, selectedPatient]);
+
+  useEffect(() => {
+    if (!doctorId) return;
     const socket = io(import.meta.env.VITE_SOCKET_URL || "http://localhost:5000", {
       auth: { token: localStorage.getItem("token") || "" },
     });
-
-    socket.on("connect", () => console.log("✅ WebSocket connected for patients"));
 
     socket.on("patient:added", (newPatient: Patient) => {
       queryClient.setQueryData(["assignedPatients", doctorId], (old: Patient[] | undefined) =>
@@ -103,204 +121,182 @@ const PatientManagementDashboard = () => {
 
     socket.on("patient:updated", (updatedPatient: Patient) => {
       queryClient.setQueryData(["assignedPatients", doctorId], (old: Patient[] | undefined) =>
-        old?.map(p => p.id === updatedPatient.id ? updatedPatient : p)
+        old?.map((p) => (p.id === updatedPatient.id ? updatedPatient : p))
       );
-      if (selectedPatient?.id === updatedPatient.id) {
-        setSelectedPatient(updatedPatient);
-      }
+      setSelectedPatient((current) =>
+        current?.id === updatedPatient.id ? updatedPatient : current
+      );
     });
 
     socket.on("patient:deleted", (deletedId: string) => {
       queryClient.setQueryData(["assignedPatients", doctorId], (old: Patient[] | undefined) =>
-        old?.filter(p => p.id !== deletedId)
+        old?.filter((p) => p.id !== deletedId)
       );
-      if (selectedPatient?.id === deletedId) {
-        setSelectedPatient(null);
-      }
+      setSelectedPatient((current) => (current?.id === deletedId ? null : current));
     });
 
     return () => socket.disconnect();
-  }, [queryClient, doctorId, selectedPatient]);
+  }, [doctorId, queryClient]);
 
-  const filteredPatients = patients.filter(patient =>
-    patient.full_name && patient.full_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  useEffect(() => {
-    if (!selectedPatient && filteredPatients.length > 0) {
-      setSelectedPatient(filteredPatients[0]);
-    }
-  }, [filteredPatients, selectedPatient]);
-
-  if (isLoading) {
-    return <div className="min-h-screen bg-gray-50 p-6 text-center">Loading patients...</div>;
-  }
-
-  return (
-
-      <div className="max-w-8xl mx-auto">
+  if (isLoading)
+    return (
+      <div className="max-w-full mx-auto p-6 bg-background min-h-screen">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Patient Management</h1>
-          <p className="text-gray-600">Comprehensive patient information and medical records</p>
+          <Skeleton className="h-9 w-64 mb-2" />
+          <Skeleton className="h-5 w-96" />
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: Patient List */}
-  <div className="lg:col-span-2">
-  <div className="bg-card rounded-xl shadow-md p-6 border border-border">
-    {/* Search Box */}
-    <div className="mb-6">
-      <div className="relative">
-        <input
-          type="text"
-          placeholder="Search patients..."
-          className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow duration-200"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        <svg
-          className="absolute left-3 top-3.5 h-5 w-5 text-gray-400"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-        >
-          <path
-            fillRule="evenodd"
-            d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-            clipRule="evenodd"
-          />
-        </svg>
-      </div>
-    </div>
-
-    {/* Filters */}
-    <div className="mb-6">
-      <h2 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">Filters</h2>
-      <div className="flex flex-wrap gap-3">
-        <button className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 transition-colors">All</button>
-        <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition-colors">Today</button>
-        <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition-colors">Upcoming</button>
-        <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition-colors">Completed</button>
-      </div>
-    </div>
-
-    {/* Patient List */}
-    <div>
-      <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">
-        Patient List ({filteredPatients.length})
-      </h2>
-      <div className="space-y-3 max-h-[500px] overflow-y-auto">
-        {filteredPatients.map((patient) => (
-          <div
-            key={patient.id}
-            className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 shadow-sm ${
-              selectedPatient?.id === patient.id
-                ? 'border-blue-500 bg-blue-50 shadow-md'
-                : 'border-gray-200 hover:bg-gray-50 hover:shadow-sm'
-            }`}
-            onClick={() => setSelectedPatient(patient)}
-          >
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="font-medium text-foreground">{patient.full_name}</h3>
-                <p className="text-sm text-gray-500 mt-1">{patient.email}</p>
-              </div>
-              <div className="text-xs text-gray-400">
-                {new Date(patient.admission_date).toLocaleDateString()}
-              </div>
+        <div className="flex w-full gap-6">
+          {/* Left - Patient List Skeleton */}
+          <div className="w-[40%] bg-card rounded-xl shadow-md p-6 border border-border">
+            <Skeleton className="h-12 w-full mb-6" />
+            <Skeleton className="h-7 w-48 mb-4" />
+            <div className="space-y-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="p-4 border border-border rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-5 w-32" />
+                      <Skeleton className="h-4 w-48" />
+                    </div>
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        ))}
-        {filteredPatients.length === 0 && (
-          <div className="text-center text-gray-500 py-4">No patients found.</div>
+
+          {/* Right - Patient Preview Skeleton */}
+          <div className="w-[60%] bg-card p-6 rounded-lg shadow-lg border border-border">
+            <Skeleton className="h-8 w-48 mb-6" />
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="mb-6 p-4 rounded-lg border border-border">
+                <Skeleton className="h-6 w-32 mb-3" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+
+  if (error)
+    return (
+      <div className="min-h-screen flex justify-center items-center bg-background text-red-600 dark:text-red-400">
+        Failed to load patients.
+      </div>
+    );
+
+  return (
+    <div className="max-w-full mx-auto p-6 bg-background rounded-3xl transition-colors duration-300">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold text-foreground">Patient Management</h1>
+        <p className="text-muted-foreground">
+          Comprehensive patient information and medical records
+        </p>
+      </header>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Patient List */}
+        <div className="lg:col-span-2 bg-card border border-border rounded-xl shadow-md p-6 max-h-[700px] overflow-y-auto">
+          <input
+            type="text"
+            placeholder="Search patients..."
+            className="w-full p-3 mb-6 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            value={searchText}
+            onChange={onSearchChange}
+          />
+          <h2 className="text-lg font-semibold mb-4 border-b border-border pb-2 text-foreground">
+            Patient List ({filteredPatients.length})
+          </h2>
+          {filteredPatients.length === 0 ? (
+            <div className="text-center text-muted-foreground py-10">
+              No patients found.
+            </div>
+          ) : (
+            filteredPatients.map((patient) => (
+              <div
+                key={patient.id}
+                className={`p-4 mt-2 border rounded-lg cursor-pointer transition-all duration-200 ${
+                  selectedPatient?.id === patient.id
+                    ? "hover:border-red-500  bg-black dark:bg-black shadow-md"
+                    : "border-gray-200 dark:border-gray-700  hover:bg-gray-100 dark:hover:bg-gray-800"
+                }`}
+                onClick={() => setSelectedPatient(patient)}
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="font-medium text-foreground">
+                      {patient.full_name}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">{patient.email}</p>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {new Date(patient.admission_date).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Patient Preview */}
+        {selectedPatient && (
+          <PatientPreview patient={selectedPatient} calculateAge={calculateAge} />
         )}
       </div>
     </div>
-  </div>
-</div>
-
-
-{/* Right Column: Patient Preview */}
-<div className="">
-  {selectedPatient && (
-  <div className="bg-card rounded-lg shadow-lg p-6 border border-border">
-      <h2 className="text-2xl font-bold text-blue-600 mb-6">Patient Preview</h2>
-
-      {/* Personal Info */}
-      <div className="mb-6 p-4 rounded-lg border border-gray-200 bg-gray-50">
-        <h3 className="text-lg font-semibold text-gray-700 mb-3">Personal Info</h3>
-        <div className="space-y-2 text-sm text-gray-600">
-          <p><span>Name:</span> <span className="font-semibold text-blue-800">{selectedPatient.full_name}</span></p>
-          <p><span>Age:</span> <span className="font-semibold text-blue-800">{calculateAge(selectedPatient.date_of_birth)}</span></p>
-          <p><span>Date of Birth:</span> <span className="font-semibold text-blue-800">{new Date(selectedPatient.date_of_birth).toLocaleDateString()}</span></p>
-          <p><span>Gender:</span> <span className="font-semibold text-blue-800">{selectedPatient.gender}</span></p>
-          <p><span>Blood Type:</span> <span className="font-semibold text-blue-800">{selectedPatient.blood_type}</span></p>
-        </div>
-      </div>
-
-      {/* Medical History */}
-      <div className="mb-6 p-4 rounded-lg border border-gray-200 bg-gray-50">
-        <h3 className="text-lg font-semibold text-gray-700 mb-3">Medical History</h3>
-        <div className="space-y-2 text-sm text-gray-600">
-          <p><span>Allergies:</span> <span className="font-semibold text-yellow-800">{selectedPatient.allergies.length ? selectedPatient.allergies.join(", ") : "N/A"}</span></p>
-          <p><span>Current Medications:</span> <span className="font-semibold text-yellow-800">{selectedPatient.current_medications.length ? selectedPatient.current_medications.join(", ") : "N/A"}</span></p>
-          <p><span>History:</span> <span className="font-semibold text-yellow-800">{selectedPatient.medical_history.length ? selectedPatient.medical_history.join(", ") : "N/A"}</span></p>
-        </div>
-      </div>
-
-      {/* Admission Details */}
-      <div className="mb-6 p-4 rounded-lg border border-gray-200 bg-gray-50">
-        <h3 className="text-lg font-semibold text-gray-700 mb-3">Admission Details</h3>
-        <div className="space-y-2 text-sm text-gray-600">
-          <p><span>Admission Date:</span> <span className="font-semibold text-green-800">{new Date(selectedPatient.admission_date).toLocaleDateString()}</span></p>
-          <p><span>Discharge Date:</span> <span className="font-semibold text-green-800">{selectedPatient.discharge_date ? new Date(selectedPatient.discharge_date).toLocaleDateString() : "N/A"}</span></p>
-          <p><span>Status:</span> <span className={`ml-2 px-3 py-1 rounded-full text-xs font-semibold ${
-              selectedPatient.status === 'Ready' ? 'bg-green-200 text-green-800' :
-              selectedPatient.status === 'Scheduled' ? 'bg-yellow-200 text-yellow-800' :
-              selectedPatient.status === 'Active' ? 'bg-blue-200 text-blue-800' :
-              'bg-gray-200 text-gray-800'
-            }`}>{selectedPatient.status}</span></p>
-        </div>
-      </div>
-
-      {/* Vitals */}
-      <div className="mb-6 p-4 rounded-lg border border-gray-200 bg-gray-50">
-        <h3 className="text-lg font-semibold text-gray-700 mb-3">Vitals</h3>
-        <div className="grid grid-cols-3 gap-4 text-sm text-gray-600">
-          <div className="bg-card p-3 rounded-lg shadow text-center">
-            <p className="font-medium text-gray-500">Blood Pressure</p>
-            <p className="font-semibold text-purple-800">{selectedPatient.vitals.bloodPressure || "N/A"}</p>
-          </div>
-          <div className="bg-card p-3 rounded-lg shadow text-center">
-            <p className="font-medium text-gray-500">Heart Rate</p>
-            <p className="font-semibold text-purple-800">{selectedPatient.vitals.heartRate ? `${selectedPatient.vitals.heartRate} bpm` : "N/A"}</p>
-          </div>
-          <div className="bg-card p-3 rounded-lg shadow text-center">
-            <p className="font-medium text-gray-500">Temperature</p>
-            <p className="font-semibold text-purple-800">{selectedPatient.vitals.temperature ? `${selectedPatient.vitals.temperature}°F` : "N/A"}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Contact Info */}
-      <div className="p-4 rounded-lg border border-gray-200 bg-gray-50">
-        <h3 className="text-lg font-semibold text-gray-700 mb-3">Contact Info</h3>
-        <div className="space-y-2 text-sm text-gray-600">
-          <p><span>Email:</span> <span className="font-semibold text-indigo-800">{selectedPatient.email}</span></p>
-          <p><span>Address:</span> <span className="font-semibold text-indigo-800">{selectedPatient.address}</span></p>
-          <p><span>Emergency Contact:</span> <span className="font-semibold text-indigo-800">{selectedPatient.emergency_contact_name} ({selectedPatient.emergency_contact_phone})</span></p>
-        </div>
-      </div>
-    </div>
-  )}
-</div>
-
-
-
-        </div>
-      </div>
-    
   );
 };
+
+// PatientPreview
+interface PreviewProps {
+  patient: Patient;
+  calculateAge: (dob: string) => number;
+}
+
+const PatientPreview = ({ patient, calculateAge }: PreviewProps) => (
+  <div className="bg-card border border-border rounded-lg shadow-lg p-6 space-y-6">
+    <h2 className="text-2xl font-bold text-foreground">Patient Preview</h2>
+    <Section title="Personal Info">
+      <Info label="Name" value={patient.full_name} />
+      <Info label="Age" value={`${calculateAge(patient.date_of_birth)} years`} />
+      <Info label="Date of Birth" value={new Date(patient.date_of_birth).toLocaleDateString()} />
+      <Info label="Gender" value={patient.gender} />
+      <Info label="Blood Type" value={patient.blood_type} />
+    </Section>
+    <Section title="Medical History">
+      <Info label="Allergies" value={patient.allergies.join(", ") || "N/A"} />
+      <Info label="Medications" value={patient.current_medications.join(", ") || "N/A"} />
+      <Info label="History" value={patient.medical_history.join(", ") || "N/A"} />
+    </Section>
+    <Section title="Contact Info">
+      <Info label="Email" value={patient.email} />
+      <Info label="Address" value={patient.address} />
+      <Info
+        label="Emergency Contact"
+        value={`${patient.emergency_contact_name} (${patient.emergency_contact_phone})`}
+      />
+    </Section>
+  </div>
+);
+
+const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <section className="p-4 rounded-lg border border-border bg-muted/30">
+    <h3 className="text-lg font-semibold text-foreground mb-3">{title}</h3>
+    <div className="space-y-2 text-sm text-muted-foreground">{children}</div>
+  </section>
+);
+
+const Info = ({ label, value }: { label: string; value: string }) => (
+  <p>
+    <span className="font-medium text-foreground">{label}: </span>
+    <span className="font-semibold  text-rose-400">{value}</span>
+  </p>
+);
 
 export default PatientManagementDashboard;

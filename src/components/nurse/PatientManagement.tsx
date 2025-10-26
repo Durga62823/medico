@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { io } from "socket.io-client";
 import { patientAPI } from "@/services/api";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // JWT decode utility
 function decodeJwt(token: string) {
@@ -131,32 +132,71 @@ const PatientManagementDashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6 text-center text-gray-600">
-        Loading patients...
+      <div className="max-w-full mx-auto p-6 bg-background min-h-screen">
+        <header className="mb-8">
+          <Skeleton className="h-9 w-64 mb-2" />
+          <Skeleton className="h-5 w-96" />
+        </header>
+
+        <div className="flex w-full gap-6">
+          {/* Left - Patient List Skeleton */}
+          <div className="w-[40%] bg-card rounded-xl shadow-md p-6 border border-border">
+            <Skeleton className="h-12 w-full mb-6" />
+            <Skeleton className="h-7 w-48 mb-4" />
+            <div className="space-y-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="p-4 border border-border rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-5 w-32" />
+                      <Skeleton className="h-4 w-48" />
+                    </div>
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right - Patient Preview Skeleton */}
+          <div className="w-[60%] bg-card p-6 rounded-lg shadow-lg border border-border">
+            <Skeleton className="h-8 w-48 mb-6" />
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="mb-6 p-4 rounded-lg border border-border">
+                <Skeleton className="h-6 w-32 mb-3" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-full mx-auto p-6  min-h-screen">
+    <div className="max-w-full mx-auto p-6 bg-background min-h-screen">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">Patient Management</h1>
-        <p className="text-gray-600">Monitor and manage your assigned patients</p>
+        <h1 className="text-3xl font-bold text-foreground">Patient Management</h1>
+        <p className="text-muted-foreground">Monitor and manage your assigned patients</p>
       </header>
 
       <div className="flex w-full gap-6">
         {/* Left - Patient List (40%) */}
-        <div className="w-[40%]  rounded-xl shadow-md p-6 border border-gray-100 overflow-y-auto">
+        <div className="w-[40%] bg-card rounded-xl shadow-md p-6 border border-border overflow-y-auto">
           <div className="relative mb-6">
             <input
               type="text"
               placeholder="Search patients..."
-              className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow duration-200"
+              className="w-full p-3 pl-10 bg-background border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow duration-200 text-foreground placeholder:text-muted-foreground"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             <svg
-              className="absolute left-3 top-3.5 h-5 w-5 text-gray-400"
+              className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground"
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
               fill="currentColor"
@@ -169,7 +209,7 @@ const PatientManagementDashboard = () => {
             </svg>
           </div>
 
-          <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">
+          <h2 className="text-lg font-semibold text-foreground mb-4 border-b border-border pb-2">
             Patient List ({filteredPatients.length})
           </h2>
           <div className="space-y-3 max-h-[500px] overflow-y-auto">
@@ -178,38 +218,38 @@ const PatientManagementDashboard = () => {
                 key={patient.id}
                 className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 shadow-sm ${
                   selectedPatient?.id === patient.id
-                    ? "border-red-500  shadow-md"
-                    : "border-gray-200 hover:bg-gray-50 hover:shadow-sm"
+                    ? "hover:border-red-500  shadow-md"
+                    : "border-border bg-background hover:bg-muted hover:shadow-sm"
                 }`}
                 onClick={() => setSelectedPatient(patient)}
               >
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="font-medium text-foreground">{patient.full_name}</h3>
-                    <p className="text-sm text-gray-500 mt-1">{patient.email}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{patient.email}</p>
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-muted-foreground">
                     {new Date(patient.admission_date).toLocaleDateString()}
                   </div>
                 </div>
               </div>
             ))}
             {filteredPatients.length === 0 && (
-              <div className="text-center text-gray-500 py-4">No patients found.</div>
+              <div className="text-center text-muted-foreground py-4">No patients found.</div>
             )}
           </div>
         </div>
 
         {/* Right - Patient Preview (60%) */}
-        <div className="w-[60%] p-6  rounded-lg shadow-lg border border-gray-200 overflow-y-auto">
+        <div className="w-[60%] p-6 bg-card rounded-lg shadow-lg border border-border overflow-y-auto">
           {selectedPatient ? (
             <div>
               <h2 className="text-2xl font-bold text-foreground mb-6">Patient Preview</h2>
 
               {/* Personal Info */}
-              <div className="mb-6 p-4 rounded-lg border border-gray-200 ">
-                <h3 className="text-lg font-semibold text-gray-700 mb-3">Personal Info</h3>
-                <div className="space-y-2 text-sm text-gray-600">
+              <div className="mb-6 p-4 rounded-lg border border-border bg-background">
+                <h3 className="text-lg font-semibold text-foreground mb-3">Personal Info</h3>
+                <div className="space-y-2 text-sm text-muted-foreground">
                   <p>
                     Name:{" "}
                     <span className="font-semibold text-foreground">
@@ -238,9 +278,9 @@ const PatientManagementDashboard = () => {
               </div>
 
               {/* Medical History */}
-              <div className="mb-6 p-4 rounded-lg border border-gray-200 ">
-                <h3 className="text-lg font-semibold text-gray-700 mb-3">Medical History</h3>
-                <div className="space-y-2 text-sm text-gray-600">
+              <div className="mb-6 p-4 rounded-lg border border-border bg-background">
+                <h3 className="text-lg font-semibold text-foreground mb-3">Medical History</h3>
+                <div className="space-y-2 text-sm text-muted-foreground">
                   <p>
                     Allergies:{" "}
                     <span className="font-semibold text-foreground">
@@ -269,18 +309,18 @@ const PatientManagementDashboard = () => {
               </div>
 
               {/* Admission Details */}
-              <div className="mb-6 p-4 rounded-lg border border-gray-200 ">
-                <h3 className="text-lg font-semibold text-gray-700 mb-3">Admission Details</h3>
-                <div className="space-y-2 text-sm text-gray-600">
+              <div className="mb-6 p-4 rounded-lg border border-border bg-background">
+                <h3 className="text-lg font-semibold text-foreground mb-3">Admission Details</h3>
+                <div className="space-y-2 text-sm text-muted-foreground">
                   <p>
                     Admission Date:{" "}
-                    <span className="font-semibold text-green-800">
+                    <span className="font-semibold text-foreground">
                       {new Date(selectedPatient.admission_date).toLocaleDateString()}
                     </span>
                   </p>
                   <p>
                     Discharge Date:{" "}
-                    <span className="font-semibold text-green-800">
+                    <span className="font-semibold text-foreground">
                       {selectedPatient.discharge_date
                         ? new Date(selectedPatient.discharge_date).toLocaleDateString()
                         : "N/A"}
@@ -305,24 +345,24 @@ const PatientManagementDashboard = () => {
                 </div>
               </div>
               {/* Contact Info */}
-            <div className="p-4 rounded-lg border border-gray-200 ">
-                <h3 className="text-lg font-semibold text-gray-700 mb-3">Contact Info</h3>
-                <div className="space-y-2 text-sm text-gray-600">
+            <div className="p-4 rounded-lg border border-border bg-background">
+                <h3 className="text-lg font-semibold text-foreground mb-3">Contact Info</h3>
+                <div className="space-y-2 text-sm text-muted-foreground">
                   <p>
                     Email:{" "}
-                    <span className="font-semibold text-red-800">
+                    <span className="font-semibold text-foreground">
                       {selectedPatient.email}
                     </span>
                   </p>
                   <p>
                     Address:{" "}
-                    <span className="font-semibold text-indigo-800">
+                    <span className="font-semibold text-foreground">
                       {selectedPatient.address}
                     </span>
                   </p>
                   <p>
                     Emergency Contact:{" "}
-                    <span className="font-semibold text-indigo-800">
+                    <span className="font-semibold text-foreground">
                       {selectedPatient.emergency_contact_name} (
                       {selectedPatient.emergency_contact_phone})
                     </span>
@@ -331,7 +371,7 @@ const PatientManagementDashboard = () => {
               </div>
             </div>
           ) : (
-            <div className="text-center text-gray-500 py-10">
+            <div className="text-center text-muted-foreground py-10">
               Select a patient to view details.
             </div>
           )}

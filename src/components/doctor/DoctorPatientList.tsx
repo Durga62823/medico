@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { patientAPI, vitalAPI } from "@/services/api";
+import { patientAPI, vitalAPI, appointmentAPI } from "@/services/api";
 import { io } from "socket.io-client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,18 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Heart, Activity, CheckCircle, UserCheck, AlertTriangle, Calendar, Thermometer, BluetoothConnected, DroneIcon, DropletIcon } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Heart, Activity, CheckCircle, UserCheck, AlertTriangle, Calendar, Thermometer } from "lucide-react";
 import { toast } from "react-toastify";
 import type { AxiosError } from "axios";
 import { useNavigate } from "react-router-dom";
@@ -57,6 +68,7 @@ interface Patient {
   condition: string;
   status: "Active" | "Discharged" | "Transferred";
   admission_date: string;
+  date_of_birth: string;
   room: string;
   avatar?: string;
 }
@@ -74,6 +86,13 @@ const DoctorPatientList = () => {
   const user = getStoredUser();
   const doctorId = user?.id || "";
   const navigate = useNavigate();
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [selectedPatientForSchedule, setSelectedPatientForSchedule] = useState<Patient | null>(null);
+  const [appointmentData, setAppointmentData] = useState({
+    date: "",
+    time: "",
+    notes: "",
+  });
 
   // ✅ Fetch patients
   const { data: patients = [], isLoading: isLoadingPatients } = useQuery<Patient[]>({
@@ -119,6 +138,28 @@ const DoctorPatientList = () => {
     },
   });
 
+  // ✅ Schedule appointment mutation
+  const scheduleAppointmentMutation = useMutation({
+    mutationFn: async (data: { patient_id: string; appointment_date: string; appointment_time: string; notes: string }) => {
+      return await appointmentAPI.createAppointment({
+        ...data,
+        staff_id: doctorId,
+        appointment_type: "follow-up",
+        status: "scheduled",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["doctorAppointments"] });
+      toast.success("Visit scheduled successfully!");
+      setScheduleDialogOpen(false);
+      setAppointmentData({ date: "", time: "", notes: "" });
+    },
+    onError: (error: AxiosError) => {
+      const msg = (error.response?.data as { message?: string })?.message || "Failed to schedule visit.";
+      toast.error(msg);
+    },
+  });
+
   // ✅ WebSocket for real-time updates
   useEffect(() => {
     if (!doctorId) return;
@@ -128,10 +169,11 @@ const DoctorPatientList = () => {
     socket.on("patient:assigned", () =>
       queryClient.invalidateQueries({ queryKey: ["assignedPatients", doctorId] })
     );
-    return () => socket.disconnect();
+    return () => {
+      socket.disconnect();
+    };
   }, [doctorId, queryClient]);
 
-  // ✅ UI helpers
   const getStatusBadge = (status: Patient["status"]) => {
     const colors = {
       Active: "bg-blue-100 text-blue-700",
@@ -148,7 +190,23 @@ const DoctorPatientList = () => {
     );
   };
 
-  const scheduleVisit = (name: string) => toast.info(`Next visit scheduled for ${name} at 2:00 PM.`);
+  const handleScheduleVisit = (patient: Patient) => {
+    setSelectedPatientForSchedule(patient);
+    setScheduleDialogOpen(true);
+  };
+
+  const handleScheduleSubmit = () => {
+    if (!selectedPatientForSchedule || !appointmentData.date || !appointmentData.time) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    scheduleAppointmentMutation.mutate({
+      patient_id: selectedPatientForSchedule._id,
+      appointment_date: appointmentData.date,
+      appointment_time: appointmentData.time,
+      notes: appointmentData.notes || "Follow-up visit",
+    });
+  };
 function calculateAge(dobString: string) {
   const dob = new Date(dobString);
   const today = new Date();
@@ -186,14 +244,13 @@ return (
         <CardContent className="p-8 text-center">
           <UserCheck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-foreground mb-2">No patients assigned</h3>
-          <p className="text-gray-500">You currently have no active patients to manage.</p>
+          <p className="text-muted-foreground">You currently have no active patients to manage.</p>
         </CardContent>
       </Card>
     ) : (
       <div className="grid gap-4">
         {patients.map((patient, index) => {
           const v = vitalsMap[patient._id];
-          const bp = v ? `${v.blood_pressure_systolic}/${v.blood_pressure_diastolic}` : "-";
           return (
             <motion.div
               key={patient._id}
@@ -213,15 +270,15 @@ return (
                         <h4 className="font-semibold">{patient.full_name}</h4>
                         {getStatusBadge(patient.status)}
                       </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                      <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                         <div>
-                          <p><span className="font-medium">Age:</span> {calculateAge(patient.date_of_birth)}</p>
-                          <p><span className="font-medium">Gender:</span> {patient.gender}</p>
-                          <p><span className="font-medium">Room:</span> {patient.room}</p>
-                          <p><span className="font-medium">Condition:</span> {patient.condition}</p>
+                          <p><span className="font-medium text-foreground">Age:</span> {calculateAge(patient.date_of_birth)}</p>
+                          <p><span className="font-medium text-foreground">Gender:</span> {patient.gender}</p>
+                          <p><span className="font-medium text-foreground">Room:</span> {patient.room}</p>
+                          <p><span className="font-medium text-foreground">Condition:</span> {patient.condition}</p>
                         </div>
                         <div>
-                          <p className="flex items-center gap-1"><DropletIcon className="h-4 w-4 text-red-500" /> {v?.heart_rate ?? "-"} BPM</p>
+                          <p className="flex items-center gap-1"><Heart className="h-4 w-4 text-red-500" /> {v?.heart_rate ?? "-"} BPM</p>
                           <p className="flex items-center gap-1"><Activity className="h-4 w-4 text-blue-500" /> {v?.blood_pressure?? "-"}</p>
                           <p className="flex items-center gap-1"><Thermometer className="h-4 w-4 text-orange-500" /> {v?.temperature ?? "-"}°C</p>
                           <p className="flex items-center gap-1"><Activity className="h-4 w-4 text-green-500" /> {v?.oxygen_saturation ?? "-"}%</p>
@@ -230,7 +287,7 @@ return (
                     </div>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Button variant="outline" size="sm" onClick={() => scheduleVisit(patient.full_name)}>
+                    <Button variant="outline" size="sm" onClick={() => handleScheduleVisit(patient)}>
                       <Calendar className="h-4 w-4 mr-2" /> Schedule Visit
                     </Button>
                     {patient.status !== "Discharged" && (
@@ -267,6 +324,59 @@ return (
         })}
       </div>
     )}
+
+    {/* Schedule Visit Dialog */}
+    <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Schedule Visit</DialogTitle>
+          <DialogDescription>
+            Schedule a follow-up visit for {selectedPatientForSchedule?.full_name}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="date">Date</Label>
+            <Input
+              id="date"
+              type="date"
+              value={appointmentData.date}
+              onChange={(e) => setAppointmentData({ ...appointmentData, date: e.target.value })}
+              min={new Date().toISOString().split('T')[0]}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="time">Time</Label>
+            <Input
+              id="time"
+              type="time"
+              value={appointmentData.time}
+              onChange={(e) => setAppointmentData({ ...appointmentData, time: e.target.value })}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="notes">Notes (optional)</Label>
+            <Textarea
+              id="notes"
+              placeholder="Enter visit notes or reason..."
+              value={appointmentData.notes}
+              onChange={(e) => setAppointmentData({ ...appointmentData, notes: e.target.value })}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setScheduleDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleScheduleSubmit}
+            disabled={scheduleAppointmentMutation.isPending}
+          >
+            {scheduleAppointmentMutation.isPending ? "Scheduling..." : "Schedule Visit"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 );
 };

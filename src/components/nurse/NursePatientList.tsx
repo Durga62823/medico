@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Activity,
   UserCheck,
@@ -109,9 +110,9 @@ const NursePatientList = () => {
   // UI Helpers
   const getStatusBadge = (status: Patient["status"]) => {
     const colors = {
-      Active: "bg-blue-100 text-blue-700",
-      Transferred: "bg-yellow-100 text-yellow-700",
-      Discharged: "bg-gray-200 text-gray-600",
+      Active: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/50",
+      Transferred: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/50",
+      Discharged: "bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/50",
     }[status];
     return (
       <Badge className={`text-xs flex items-center gap-1 ${colors}`}>
@@ -137,10 +138,39 @@ const NursePatientList = () => {
 
   if (isLoadingPatients) {
     return (
-      <div className="flex justify-center items-center p-6">
-        <div className="flex flex-col items-center">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="mt-3 text-gray-500">Loading patients...</p>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-7 w-40" />
+          <Skeleton className="h-6 w-20" />
+        </div>
+        <div className="grid gap-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-6 flex flex-col md:flex-row justify-between gap-4">
+                <div className="flex gap-4 flex-1">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="flex-1 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-6 w-32" />
+                      <Skeleton className="h-6 w-16" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-28" />
+                      </div>
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-20" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     );
@@ -157,7 +187,7 @@ const NursePatientList = () => {
           <CardContent className="p-8 text-center">
             <UserCheck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-2">No patients assigned</h3>
-            <p className="text-gray-500">You currently have no active patients to manage.</p>
+            <p className="text-muted-foreground">You currently have no active patients to manage.</p>
           </CardContent>
         </Card>
       ) : (
@@ -183,10 +213,10 @@ const NursePatientList = () => {
                       </Avatar>
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-3">
-                          <h4 className="font-semibold">{patient.full_name}</h4>
+                          <h4 className="font-semibold text-foreground">{patient.full_name}</h4>
                           {getStatusBadge(patient.status)}
                         </div>
-                        <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                        <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                           <div>
                             <p><span className="font-medium">Age:</span> {calculateAge(patient.date_of_birth)}</p>
                             <p><span className="font-medium">Gender:</span> {patient.gender}</p>

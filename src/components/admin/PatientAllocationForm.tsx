@@ -16,13 +16,14 @@ type Alert = { type: "info" | "warning" | "critical"; message: string };
 
 export type PatientAllocation = {
   id: string;
+  patientId?: string; // Added for creating new allocations
   name: string;
   room: string;
   department: string;
   status: "stable" | "critical" | "monitoring" | "improving";
   day: number;
   primaryDiagnosis: string;
-
+  vitals?: Vitals; // Made optional since backend may not return it
   alerts: Alert[];
 };
 
@@ -37,6 +38,7 @@ export default function PatientAllocationAdmin() {
   const [selectedId, setSelectedId] = useState<string>("");
   const [form, setForm] = useState<PatientAllocation>({
     id: "",
+    patientId: "",
     name: "",
     room: "",
     department: "",
@@ -106,6 +108,7 @@ useEffect(() => {
         // Fresh allocation for this patient
         setForm({
           id: selectedId,
+          patientId: selectedId, // Set patientId for new allocation
           name: patient ? patient.full_name : "",
           room: "",
           department: "",
@@ -124,6 +127,7 @@ useEffect(() => {
     setSelectedId("");
     setForm({
       id: "",
+      patientId: "",
       name: "",
       room: "",
       department: "",
@@ -142,7 +146,7 @@ useEffect(() => {
   const handleVitalChange = (key: keyof Vitals, value: string | number) => {
     setForm((prev) => ({
       ...prev,
-      vitals: { ...prev.vitals, [key]: value },
+      vitals: { ...(prev.vitals || { bp: "", hr: 0, temp: "", rr: 0, spo2: "" }), [key]: value },
     }));
   };
   const handleAlertChange = (index: number, field: keyof Alert, value: string) => {
@@ -169,16 +173,31 @@ useEffect(() => {
     try {
       let result: PatientAllocation;
 
-      if (form.id) result = await allocationApi.put(form.id, form);
-     result = await allocationApi.post(form);
-    //  console.(result);
-      // console.log(result)
-      toast.success("Allocation saved");
+      if (form.id) {
+        result = await allocationApi.put(form.id, form);
+      } else {
+        result = await allocationApi.post(form);
+      }
+      
+      toast.success(form.id ? "Allocation updated" : "Allocation created");
       setForm(result);
-      if (!allocations.some((a) => a.id === result.id)) setAllocations((old) => [...old, result]);
-    } catch (err: any) {
-
-      toast.error("Failed to save allocation");
+      if (!allocations.some((a) => a.id === result.id)) {
+        setAllocations((old) => [...old, result]);
+      } else {
+        // Update existing allocation in the list
+        setAllocations((old) => old.map((a) => a.id === result.id ? result : a));
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to save allocation";
+      toast.error(errorMsg);
+      console.error("Allocation save error:", err);
+      
+      // If update failed due to 404, reset the form ID and retry as new allocation
+      if (form.id && errorMsg.includes("404")) {
+        toast.info("Allocation not found. Creating new allocation instead.");
+        const formWithoutId = { ...form, id: "" };
+        setForm(formWithoutId);
+      }
     } finally {
       setLoading(false);
     }
@@ -280,7 +299,17 @@ const handleDischarge = async (id:string) => {
                   className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-medical-primary focus:outline-none"
                   value={form.id}
                   onChange={e => {
-                    setSelectedId(e.target.value);
+                    const patientId = e.target.value;
+                    setSelectedId(patientId);
+                    // Also update the form's patientId field
+                    const patient = patients.find(p => p._id === patientId);
+                    if (patient) {
+                      setForm(prev => ({
+                        ...prev,
+                        patientId: patientId,
+                        name: patient.full_name
+                      }));
+                    }
                   }}
                   disabled={!!form.id}
                 >
@@ -375,7 +404,7 @@ const handleDischarge = async (id:string) => {
                       type={type}
                       placeholder={label}
                       className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-medical-primary focus:outline-none"
-                      value={form.vitals[key as keyof Vitals]}
+                      value={form.vitals?.[key as keyof Vitals] ?? (type === "number" ? 0 : "")}
                       onChange={e =>
                         handleVitalChange(
                           key as keyof Vitals,

@@ -1,8 +1,7 @@
 import { Bed, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
-import React, { useState, useEffect } from "react";
-import { allocationApi, vitalAPI, patientAPI } from "../../services/api";
+import { allocationApi } from "../../services/api";
 import { useQuery } from "@tanstack/react-query";
 
 // Animation variants
@@ -20,45 +19,29 @@ const patientItemVariants = {
 };
 
 // Type definitions
-interface Patient {
+interface Allocation {
   _id: string;
-  full_name: string;
-  age: number;
-  gender: string;
-  condition: string;
-  status: "Active" | "Discharged" | "Transferred";
-  admission_date: string;
-  room: string;
-  avatar?: string;
-}
-
-interface Vitals {
-  heart_rate: number;
-  blood_pressure: number;
-  temperature: number;
-  oxygen_saturation: number;
-  recorded_at: string;
-}
-
-type PatientAllocation = {
   id: string;
+  patient: {
+    _id: string;
+    full_name: string;
+  };
   name: string;
   room: string;
-  admissionDay: number;
-  condition: "stable" | "monitoring" | "improving" | "critical";
   department: string;
-  diagnosis: string;
-  vitals: Vitals;
-  alerts: string[];
-  lastUpdate: string;
-};
+  status: "stable" | "critical" | "monitoring" | "improving";
+  day: number;
+  primaryDiagnosis: string;
+  admission_date?: string;
+  discharged: boolean;
+}
 
 // Style mappings
 const conditionStyles = {
-  stable: "bg-green-100 text-green-700",
-  monitoring: "bg-yellow-100 text-yellow-700",
-  improving: "bg-blue-100 text-blue-700",
-  critical: "bg-red-100 text-red-700",
+  stable: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20",
+  monitoring: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20",
+  improving: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+  critical: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
 };
 
 // JWT helpers
@@ -87,64 +70,23 @@ function getStoredUser() {
 }
 
 export const InPatientSnapshot = () => {
-  const [patients, setPatients] = useState<PatientAllocation[]>([]);
   const user = getStoredUser();
   const DoctorId = user?.id || "";
 
-  // 🔹 Fetch patients on mount
-  useEffect(() => {
-    const fetchAllocations = async () => {
-      try {
-        const data = await allocationApi.get();
-        const normalized = data.map((p: any) => ({
-          id: p.id || p._id,
-          name: p.name,
-          room: p.room,
-          admissionDay: p.day || p.admissionDay || 1,
-          condition: (p.status || p.condition || "monitoring").toLowerCase(),
-          department: p.department,
-          diagnosis: p.primaryDiagnosis || p.diagnosis || "N/A",
-          vitals: {
-            blood_pressure: p.vitals?.bp || p.vitals?.bloodPressure || 0,
-            heart_rate: p.vitals?.hr || p.vitals?.heartRate || 0,
-            temperature: p.vitals?.temp || p.vitals?.temperature || 0,
-            oxygen_saturation: p.vitals?.spo2 || p.vitals?.oxygenSaturation || 0,
-            recorded_at: p.vitals?.recorded_at || "",
-          },
-          alerts: Array.isArray(p.alerts)
-            ? typeof p.alerts[0] === "string"
-              ? p.alerts
-              : p.alerts.map((a) => a.message || a.type || "")
-            : [],
-          lastUpdate: p.updatedAt
-            ? new Date(p.updatedAt).toLocaleString()
-            : "N/A",
-        }));
-        setPatients(normalized);
-      } catch (error) {
-        console.error("Error fetching allocations:", error);
-      }
-    };
-
-    fetchAllocations();
-  }, []);
-
-  // 🔹 Fetch assigned patients for doctor
-  const { data: assignedPatients = [], isLoading: isLoadingPatients } =
-    useQuery<Patient[]>({
-      queryKey: ["assignedPatients", DoctorId],
+  // 🔹 Fetch patient allocations for doctor
+  const { data: allocations = [], isLoading: isLoadingAllocations } =
+    useQuery<Allocation[]>({
+      queryKey: ["doctorAllocations", DoctorId],
       queryFn: async () => {
         if (!DoctorId) return [];
-        const res = await patientAPI.getAllPatients({
-          assigned_doctor: DoctorId,
-        });
-        return Array.isArray(res.data) ? res.data : [];
+        const res = await allocationApi.get();
+        return Array.isArray(res) ? res : [];
       },
       enabled: !!DoctorId,
     });
 
   // 🔹 Loading state
-  if (isLoadingPatients) {
+  if (isLoadingAllocations) {
     return (
       <div className="text-center text-muted-foreground py-6">
         Loading admitted patients...
@@ -154,18 +96,18 @@ export const InPatientSnapshot = () => {
 
   return (
     <motion.div
-      className="glass rounded-xl p-6"
+      className="rounded-xl border bg-card shadow-sm p-6"
       variants={staggerContainerVariants}
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.2 }}
     >
-      <h3 className="text-lg font-semibold text-primary-navy mb-4 flex items-center gap-2">
-        <Bed className="h-5 w-5" />
+      <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+        <Bed className="h-5 w-5 text-blue-500" />
         My Admitted Patients
       </h3>
 
-      {assignedPatients.length === 0 ? (
+      {allocations.length === 0 ? (
         <motion.div
           className="text-center text-muted-foreground py-6"
           initial={{ opacity: 0, y: 10 }}
@@ -179,39 +121,44 @@ export const InPatientSnapshot = () => {
       (
         
         <div className="space-y-3">
-          {assignedPatients.map((patient) => (
+          {allocations.map((allocation) => (
             
             <motion.div
-              key={patient.id}
+              key={allocation._id || allocation.id}
               variants={patientItemVariants}
               whileHover={{ scale: 1.02 }}
               transition={{ duration: 0.2 }}
               className="p-3 rounded-lg border border-border hover:border-secondary/50 cursor-pointer transition-all duration-200"
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="font-medium text-foreground">{patient.full_name}</span>
+                <span className="font-medium text-foreground">{allocation.name}</span>
                 <Badge
                   variant="outline"
-                  className={
+                  className={`border ${
                     conditionStyles[
-                      patient.condition as keyof typeof conditionStyles
-                    ] || "bg-gray-100 text-gray-600"
-                  }
+                      allocation.status as keyof typeof conditionStyles
+                    ] || "bg-muted/50 text-muted-foreground border-border"
+                  }`}
                 >
-                  {patient.condition}
+                  {allocation.status}
                 </Badge>
               </div>
 
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Bed className="h-3 w-3" />
-                  Room {patient.room}
+                  Room {allocation.room}
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  Day {patient.admissionDay}
+                  Day {allocation.day}
                 </span>
               </div>
+              {allocation.primaryDiagnosis && (
+                <div className="mt-2 text-xs text-muted-foreground">
+                  {allocation.primaryDiagnosis}
+                </div>
+              )}
             </motion.div>
           ))}
         </div>

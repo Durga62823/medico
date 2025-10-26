@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -237,10 +238,79 @@ export default function InPatientsPage() {
 
   if (isLoadingNursePatients) {
     return (
-      <div className="flex justify-center items-center p-6">
-        <div className="flex flex-col items-center">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="mt-3 text-gray-500">Loading patients...</p>
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-full mx-auto space-y-6">
+          {/* Header Skeleton */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div className="flex-1">
+                <Skeleton className="h-9 w-64 mb-2" />
+                <Skeleton className="h-4 w-96" />
+              </div>
+              <Skeleton className="h-14 w-14 rounded-full" />
+            </CardHeader>
+            <CardContent className="pb-0">
+              <div className="flex gap-4 mb-4">
+                <Skeleton className="h-10 w-48" />
+                <Skeleton className="h-10 w-32" />
+              </div>
+            </CardContent>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <Card key={i} className="p-4">
+                    <div className="flex justify-between items-center">
+                      <div className="space-y-2 flex-1">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-8 w-16" />
+                      </div>
+                      <Skeleton className="h-6 w-6 rounded" />
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Patient Cards Skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i} className="p-6">
+                <CardHeader className="flex flex-row justify-between items-start">
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-6 w-40" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-6 w-20" />
+                    <Skeleton className="h-3 w-12" />
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Skeleton className="h-4 w-32 mb-2" />
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {[1, 2, 3, 4, 5].map((j) => (
+                      <div key={j} className="bg-muted rounded-lg p-3 text-center space-y-2">
+                        <Skeleton className="h-4 w-4 mx-auto" />
+                        <Skeleton className="h-5 w-12 mx-auto" />
+                        <Skeleton className="h-3 w-8 mx-auto" />
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-between border-t pt-3">
+                  <Skeleton className="h-4 w-32" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-9 w-24" />
+                    <Skeleton className="h-9 w-20" />
+                  </div>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
     );

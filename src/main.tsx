@@ -10,6 +10,7 @@ import Auth from "./pages/Auth.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import ThemeToggle from "@/components/ThemeToggle";
 import FloatingAIAssistant from "./components/FloatingAIAssistant";
+import { GlobalNotificationListener } from "./components/GlobalNotificationListener";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,9 @@ createRoot(document.getElementById("root")!).render(
         
         {/* Floating AI Assistant - Global */}
         <FloatingAIAssistant />
+        
+        {/* Global Notification Listener - Shows toast on all pages */}
+        <GlobalNotificationListener />
         
         <Routes>
           <Route path="/" element={<Index />} />
